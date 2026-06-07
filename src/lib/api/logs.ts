@@ -1,3 +1,4 @@
+import { endOfDay, startOfDay } from "@/lib/format"
 import { supabase } from "@/lib/supabase"
 import type {
   ActivityItem,
@@ -9,12 +10,6 @@ import type {
   PumpLog,
   SleepLog,
 } from "@/lib/types"
-
-function startOfToday() {
-  const d = new Date()
-  d.setHours(0, 0, 0, 0)
-  return d.toISOString()
-}
 
 export async function insertFeed(input: {
   babyId: string
@@ -144,8 +139,12 @@ export async function insertPump(input: {
   return data as PumpLog
 }
 
-export async function getTodayActivities(babyId: string): Promise<ActivityItem[]> {
-  const since = startOfToday()
+export async function getActivitiesForDay(
+  babyId: string,
+  date: Date,
+): Promise<ActivityItem[]> {
+  const since = startOfDay(date).toISOString()
+  const until = endOfDay(date).toISOString()
 
   const [feeds, sleeps, diapers, pumps] = await Promise.all([
     supabase
@@ -153,24 +152,28 @@ export async function getTodayActivities(babyId: string): Promise<ActivityItem[]
       .select("*")
       .eq("baby_id", babyId)
       .gte("occurred_at", since)
+      .lte("occurred_at", until)
       .order("occurred_at", { ascending: false }),
     supabase
       .from("sleep_logs")
       .select("*")
       .eq("baby_id", babyId)
       .gte("started_at", since)
+      .lte("started_at", until)
       .order("started_at", { ascending: false }),
     supabase
       .from("diaper_logs")
       .select("*")
       .eq("baby_id", babyId)
       .gte("occurred_at", since)
+      .lte("occurred_at", until)
       .order("occurred_at", { ascending: false }),
     supabase
       .from("pump_logs")
       .select("*")
       .eq("baby_id", babyId)
       .gte("occurred_at", since)
+      .lte("occurred_at", until)
       .order("occurred_at", { ascending: false }),
   ])
 
@@ -205,6 +208,10 @@ export async function getTodayActivities(babyId: string): Promise<ActivityItem[]
   return items.sort(
     (a, b) => new Date(b.at).getTime() - new Date(a.at).getTime(),
   )
+}
+
+export async function getTodayActivities(babyId: string) {
+  return getActivitiesForDay(babyId, new Date())
 }
 
 export async function getActiveSleep(babyId: string): Promise<SleepLog | null> {

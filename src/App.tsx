@@ -7,7 +7,6 @@ import { AppShell } from "@/components/layout/app-shell"
 import { LoginPage } from "@/pages/login-page"
 import { SignupPage } from "@/pages/signup-page"
 import { TodayPage } from "@/pages/today-page"
-import { LogPage } from "@/pages/log-page"
 import { SchedulePage } from "@/pages/schedule-page"
 import { FamilyPage } from "@/pages/family-page"
 
@@ -24,7 +23,7 @@ export default function App() {
               <Route element={<HouseholdGate />}>
                 <Route index element={<Navigate to="/today" replace />} />
                 <Route path="today" element={<TodayPage />} />
-                <Route path="log" element={<LogPage />} />
+                <Route path="log" element={<Navigate to="/today" replace />} />
                 <Route path="schedule" element={<SchedulePage />} />
                 <Route path="family" element={<FamilyPage />} />
               </Route>

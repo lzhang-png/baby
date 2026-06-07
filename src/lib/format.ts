@@ -1,3 +1,38 @@
+export function startOfDay(date = new Date()) {
+  const d = new Date(date)
+  d.setHours(0, 0, 0, 0)
+  return d
+}
+
+export function endOfDay(date = new Date()) {
+  const d = new Date(date)
+  d.setHours(23, 59, 59, 999)
+  return d
+}
+
+export function isSameDay(a: Date, b: Date) {
+  return (
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate()
+  )
+}
+
+export function addDays(date: Date, days: number) {
+  const d = new Date(date)
+  d.setDate(d.getDate() + days)
+  return startOfDay(d)
+}
+
+export function formatDayHeading(date: Date) {
+  if (isSameDay(date, new Date())) return "Today"
+  return date.toLocaleDateString([], {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  })
+}
+
 export function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], {
     hour: "numeric",

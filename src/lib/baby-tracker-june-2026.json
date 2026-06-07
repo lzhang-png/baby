@@ -1,0 +1,1038 @@
+[
+  {
+    "kind": "pump",
+    "at": "2026-06-01T22:52:00",
+    "id": "bt-2026-06-01T22:52:00-0",
+    "amount_ml": 50,
+    "duration_left_min": 22,
+    "duration_right_min": 22
+  },
+  {
+    "kind": "sleep",
+    "at": "2026-06-01T20:58:00",
+    "id": "bt-2026-06-01T20:58:00-1",
+    "duration_min": 246,
+    "ended_at": "2026-06-01T20:58:00"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-01T20:56:00",
+    "id": "bt-2026-06-01T20:56:00-2",
+    "feed_type": "formula",
+    "amount_ml": 60,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-01T20:32:00",
+    "id": "bt-2026-06-01T20:32:00-3",
+    "amount_ml": 35,
+    "duration_left_min": 12,
+    "duration_right_min": 12
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-01T20:12:00",
+    "id": "bt-2026-06-01T20:12:00-4",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 15,
+    "side": "R"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-01T18:27:00",
+    "id": "bt-2026-06-01T18:27:00-5",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-01T17:41:00",
+    "id": "bt-2026-06-01T17:41:00-6",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 33,
+    "side": "R"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-01T15:09:00",
+    "id": "bt-2026-06-01T15:09:00-7",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 42,
+    "side": "R"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-01T12:46:00",
+    "id": "bt-2026-06-01T12:46:00-8",
+    "feed_type": "formula",
+    "amount_ml": 30,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-01T12:46:00",
+    "id": "bt-2026-06-01T12:46:00-9",
+    "feed_type": "expressed",
+    "amount_ml": 80,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-01T11:43:00",
+    "id": "bt-2026-06-01T11:43:00-10",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-01T09:37:00",
+    "id": "bt-2026-06-01T09:37:00-11",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 29,
+    "side": "L"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-01T05:53:00",
+    "id": "bt-2026-06-01T05:53:00-12",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-01T05:32:00",
+    "id": "bt-2026-06-01T05:32:00-13",
+    "feed_type": "formula",
+    "amount_ml": 20,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-01T05:32:00",
+    "id": "bt-2026-06-01T05:32:00-14",
+    "feed_type": "expressed",
+    "amount_ml": 80,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-01T05:03:00",
+    "id": "bt-2026-06-01T05:03:00-15",
+    "amount_ml": 125,
+    "duration_left_min": 39,
+    "duration_right_min": 39
+  },
+  {
+    "kind": "sleep",
+    "at": "2026-06-01T02:34:00",
+    "id": "bt-2026-06-01T02:34:00-16",
+    "duration_min": 177,
+    "ended_at": "2026-06-01T02:34:00"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-01T02:30:00",
+    "id": "bt-2026-06-01T02:30:00-17",
+    "diaper_type": "wet"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-01T02:24:00",
+    "id": "bt-2026-06-01T02:24:00-18",
+    "feed_type": "formula",
+    "amount_ml": 50,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-01T02:24:00",
+    "id": "bt-2026-06-01T02:24:00-19",
+    "feed_type": "expressed",
+    "amount_ml": 60,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-02T23:39:00",
+    "id": "bt-2026-06-02T23:39:00-20",
+    "amount_ml": 60,
+    "duration_left_min": 16,
+    "duration_right_min": 16
+  },
+  {
+    "kind": "sleep",
+    "at": "2026-06-02T21:30:00",
+    "id": "bt-2026-06-02T21:30:00-21",
+    "duration_min": 368,
+    "ended_at": "2026-06-02T21:30:00"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-02T21:22:00",
+    "id": "bt-2026-06-02T21:22:00-22",
+    "diaper_type": "wet"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-02T21:20:00",
+    "id": "bt-2026-06-02T21:20:00-23",
+    "feed_type": "expressed",
+    "amount_ml": 60,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-02T21:07:00",
+    "id": "bt-2026-06-02T21:07:00-24",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 20,
+    "side": "L"
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-02T19:49:00",
+    "id": "bt-2026-06-02T19:49:00-25",
+    "amount_ml": 31,
+    "duration_left_min": 6,
+    "duration_right_min": 6
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-02T18:49:00",
+    "id": "bt-2026-06-02T18:49:00-26",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 31,
+    "side": "R"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-02T15:48:00",
+    "id": "bt-2026-06-02T15:48:00-27",
+    "feed_type": "expressed",
+    "amount_ml": 60,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-02T15:29:00",
+    "id": "bt-2026-06-02T15:29:00-28",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 26,
+    "side": "R"
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-02T15:20:00",
+    "id": "bt-2026-06-02T15:20:00-29",
+    "amount_ml": 0,
+    "duration_left_min": 1,
+    "duration_right_min": 1
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-02T13:42:00",
+    "id": "bt-2026-06-02T13:42:00-30",
+    "diaper_type": "wet"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-02T13:10:00",
+    "id": "bt-2026-06-02T13:10:00-31",
+    "feed_type": "formula",
+    "amount_ml": 80,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-02T10:36:00",
+    "id": "bt-2026-06-02T10:36:00-32",
+    "amount_ml": 90,
+    "duration_left_min": 9,
+    "duration_right_min": 9
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-02T09:20:00",
+    "id": "bt-2026-06-02T09:20:00-33",
+    "feed_type": "formula",
+    "amount_ml": 100,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-02T08:38:00",
+    "id": "bt-2026-06-02T08:38:00-34",
+    "diaper_type": "wet"
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-02T07:06:00",
+    "id": "bt-2026-06-02T07:06:00-35",
+    "amount_ml": 80,
+    "duration_left_min": null,
+    "duration_right_min": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-02T06:53:00",
+    "id": "bt-2026-06-02T06:53:00-36",
+    "amount_ml": 0,
+    "duration_left_min": 12,
+    "duration_right_min": 12
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-02T06:19:00",
+    "id": "bt-2026-06-02T06:19:00-37",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-02T06:05:00",
+    "id": "bt-2026-06-02T06:05:00-38",
+    "feed_type": "expressed",
+    "amount_ml": 110,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-02T02:41:00",
+    "id": "bt-2026-06-02T02:41:00-39",
+    "amount_ml": 90,
+    "duration_left_min": 27,
+    "duration_right_min": 27
+  },
+  {
+    "kind": "sleep",
+    "at": "2026-06-02T01:22:00",
+    "id": "bt-2026-06-02T01:22:00-40",
+    "duration_min": 272,
+    "ended_at": "2026-06-02T01:22:00"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-02T01:10:00",
+    "id": "bt-2026-06-02T01:10:00-41",
+    "feed_type": "expressed",
+    "amount_ml": 60,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-02T01:10:00",
+    "id": "bt-2026-06-02T01:10:00-42",
+    "feed_type": "formula",
+    "amount_ml": 40,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-02T00:21:00",
+    "id": "bt-2026-06-02T00:21:00-43",
+    "diaper_type": "wet"
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-03T22:59:00",
+    "id": "bt-2026-06-03T22:59:00-44",
+    "amount_ml": 100,
+    "duration_left_min": 25,
+    "duration_right_min": 25
+  },
+  {
+    "kind": "sleep",
+    "at": "2026-06-03T22:30:00",
+    "id": "bt-2026-06-03T22:30:00-45",
+    "duration_min": 255,
+    "ended_at": "2026-06-03T22:30:00"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-03T22:10:00",
+    "id": "bt-2026-06-03T22:10:00-46",
+    "feed_type": "formula",
+    "amount_ml": 100,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-03T18:43:00",
+    "id": "bt-2026-06-03T18:43:00-47",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 29,
+    "side": "R"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-03T18:26:00",
+    "id": "bt-2026-06-03T18:26:00-48",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-03T15:58:00",
+    "id": "bt-2026-06-03T15:58:00-49",
+    "feed_type": "formula",
+    "amount_ml": 60,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-03T15:58:00",
+    "id": "bt-2026-06-03T15:58:00-50",
+    "amount_ml": 9,
+    "duration_left_min": 5,
+    "duration_right_min": 5
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-03T15:25:00",
+    "id": "bt-2026-06-03T15:25:00-51",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 19,
+    "side": "R"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-03T13:00:00",
+    "id": "bt-2026-06-03T13:00:00-52",
+    "feed_type": "expressed",
+    "amount_ml": 90,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-03T13:00:00",
+    "id": "bt-2026-06-03T13:00:00-53",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-03T12:35:00",
+    "id": "bt-2026-06-03T12:35:00-54",
+    "amount_ml": 12,
+    "duration_left_min": 10,
+    "duration_right_min": 10
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-03T12:11:00",
+    "id": "bt-2026-06-03T12:11:00-55",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 17,
+    "side": "R"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-03T10:47:00",
+    "id": "bt-2026-06-03T10:47:00-56",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-03T10:33:00",
+    "id": "bt-2026-06-03T10:33:00-57",
+    "feed_type": "expressed",
+    "amount_ml": 60,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-03T10:33:00",
+    "id": "bt-2026-06-03T10:33:00-58",
+    "feed_type": "formula",
+    "amount_ml": 20,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-03T10:09:00",
+    "id": "bt-2026-06-03T10:09:00-59",
+    "amount_ml": 10,
+    "duration_left_min": 10,
+    "duration_right_min": 10
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-03T09:29:00",
+    "id": "bt-2026-06-03T09:29:00-60",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 30,
+    "side": "L"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-03T08:03:00",
+    "id": "bt-2026-06-03T08:03:00-61",
+    "diaper_type": "wet"
+  },
+  {
+    "kind": "sleep",
+    "at": "2026-06-03T06:46:00",
+    "id": "bt-2026-06-03T06:46:00-62",
+    "duration_min": 13,
+    "ended_at": "2026-06-03T06:46:00"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-03T06:41:00",
+    "id": "bt-2026-06-03T06:41:00-63",
+    "feed_type": "formula",
+    "amount_ml": 80,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-03T05:26:00",
+    "id": "bt-2026-06-03T05:26:00-64",
+    "amount_ml": 120,
+    "duration_left_min": 21,
+    "duration_right_min": 21
+  },
+  {
+    "kind": "sleep",
+    "at": "2026-06-03T04:11:00",
+    "id": "bt-2026-06-03T04:11:00-65",
+    "duration_min": 149,
+    "ended_at": "2026-06-03T04:11:00"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-03T04:10:00",
+    "id": "bt-2026-06-03T04:10:00-66",
+    "diaper_type": "wet"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-03T03:40:00",
+    "id": "bt-2026-06-03T03:40:00-67",
+    "feed_type": "formula",
+    "amount_ml": 50,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-03T03:40:00",
+    "id": "bt-2026-06-03T03:40:00-68",
+    "feed_type": "expressed",
+    "amount_ml": 60,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "sleep",
+    "at": "2026-06-04T21:33:00",
+    "id": "bt-2026-06-04T21:33:00-69",
+    "duration_min": 413,
+    "ended_at": "2026-06-04T21:33:00"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-04T21:30:00",
+    "id": "bt-2026-06-04T21:30:00-70",
+    "feed_type": "expressed",
+    "amount_ml": 60,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-04T21:04:00",
+    "id": "bt-2026-06-04T21:04:00-71",
+    "amount_ml": 10,
+    "duration_left_min": 13,
+    "duration_right_min": 13
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-04T20:28:00",
+    "id": "bt-2026-06-04T20:28:00-72",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 27,
+    "side": "R"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-04T18:41:00",
+    "id": "bt-2026-06-04T18:41:00-73",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-04T18:30:00",
+    "id": "bt-2026-06-04T18:30:00-74",
+    "feed_type": "formula",
+    "amount_ml": 60,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-04T18:05:00",
+    "id": "bt-2026-06-04T18:05:00-75",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 25,
+    "side": "R"
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-04T15:34:00",
+    "id": "bt-2026-06-04T15:34:00-76",
+    "amount_ml": 150,
+    "duration_left_min": 12,
+    "duration_right_min": 12
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-04T14:46:00",
+    "id": "bt-2026-06-04T14:46:00-77",
+    "feed_type": "formula",
+    "amount_ml": 100,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-04T11:37:00",
+    "id": "bt-2026-06-04T11:37:00-78",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-04T11:29:00",
+    "id": "bt-2026-06-04T11:29:00-79",
+    "feed_type": "formula",
+    "amount_ml": 100,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-04T08:13:00",
+    "id": "bt-2026-06-04T08:13:00-80",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 18,
+    "side": "R"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-04T07:57:00",
+    "id": "bt-2026-06-04T07:57:00-81",
+    "diaper_type": "wet"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-04T05:50:00",
+    "id": "bt-2026-06-04T05:50:00-82",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-04T05:34:00",
+    "id": "bt-2026-06-04T05:34:00-83",
+    "feed_type": "expressed",
+    "amount_ml": 100,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-04T03:45:00",
+    "id": "bt-2026-06-04T03:45:00-84",
+    "amount_ml": 105,
+    "duration_left_min": 18,
+    "duration_right_min": 18
+  },
+  {
+    "kind": "sleep",
+    "at": "2026-06-04T03:10:00",
+    "id": "bt-2026-06-04T03:10:00-85",
+    "duration_min": 139,
+    "ended_at": "2026-06-04T03:10:00"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-04T03:10:00",
+    "id": "bt-2026-06-04T03:10:00-86",
+    "diaper_type": "wet"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-04T02:52:00",
+    "id": "bt-2026-06-04T02:52:00-87",
+    "feed_type": "expressed",
+    "amount_ml": 100,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "sleep",
+    "at": "2026-06-05T21:23:00",
+    "id": "bt-2026-06-05T21:23:00-88",
+    "duration_min": 228,
+    "ended_at": "2026-06-05T21:23:00"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-05T20:50:00",
+    "id": "bt-2026-06-05T20:50:00-89",
+    "diaper_type": "wet"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-05T20:32:00",
+    "id": "bt-2026-06-05T20:32:00-90",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 18,
+    "side": "R"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-05T18:37:00",
+    "id": "bt-2026-06-05T18:37:00-91",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 19,
+    "side": "R"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-05T15:38:00",
+    "id": "bt-2026-06-05T15:38:00-92",
+    "feed_type": "formula",
+    "amount_ml": 60,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-05T15:28:00",
+    "id": "bt-2026-06-05T15:28:00-93",
+    "amount_ml": 15,
+    "duration_left_min": 11,
+    "duration_right_min": 11
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-05T15:26:00",
+    "id": "bt-2026-06-05T15:26:00-94",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-05T15:11:00",
+    "id": "bt-2026-06-05T15:11:00-95",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 13,
+    "side": "L"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-05T12:32:00",
+    "id": "bt-2026-06-05T12:32:00-96",
+    "feed_type": "formula",
+    "amount_ml": 60,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-05T11:27:00",
+    "id": "bt-2026-06-05T11:27:00-97",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 54,
+    "side": "R"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-05T11:24:00",
+    "id": "bt-2026-06-05T11:24:00-98",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-05T08:54:00",
+    "id": "bt-2026-06-05T08:54:00-99",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 29,
+    "side": "L"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-05T08:00:00",
+    "id": "bt-2026-06-05T08:00:00-100",
+    "feed_type": "expressed",
+    "amount_ml": 100,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-05T06:50:00",
+    "id": "bt-2026-06-05T06:50:00-101",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-05T05:40:00",
+    "id": "bt-2026-06-05T05:40:00-102",
+    "amount_ml": 110,
+    "duration_left_min": 20,
+    "duration_right_min": 20
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-05T04:48:00",
+    "id": "bt-2026-06-05T04:48:00-103",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-05T04:29:00",
+    "id": "bt-2026-06-05T04:29:00-104",
+    "feed_type": "expressed",
+    "amount_ml": 100,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-05T01:11:00",
+    "id": "bt-2026-06-05T01:11:00-105",
+    "amount_ml": 70,
+    "duration_left_min": 16,
+    "duration_right_min": 16
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-05T00:27:00",
+    "id": "bt-2026-06-05T00:27:00-106",
+    "diaper_type": "wet"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-05T00:17:00",
+    "id": "bt-2026-06-05T00:17:00-107",
+    "feed_type": "expressed",
+    "amount_ml": 100,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-06T21:03:00",
+    "id": "bt-2026-06-06T21:03:00-108",
+    "feed_type": "formula",
+    "amount_ml": 40,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-06T20:47:00",
+    "id": "bt-2026-06-06T20:47:00-109",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 17,
+    "side": "R"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-06T20:10:00",
+    "id": "bt-2026-06-06T20:10:00-110",
+    "diaper_type": "wet"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-06T19:00:00",
+    "id": "bt-2026-06-06T19:00:00-111",
+    "feed_type": "formula",
+    "amount_ml": 40,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-06T18:52:00",
+    "id": "bt-2026-06-06T18:52:00-112",
+    "amount_ml": 8,
+    "duration_left_min": 5,
+    "duration_right_min": 5
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-06T18:43:00",
+    "id": "bt-2026-06-06T18:43:00-113",
+    "feed_type": "expressed",
+    "amount_ml": 50,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-06T18:16:00",
+    "id": "bt-2026-06-06T18:16:00-114",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 31,
+    "side": "L"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-06T16:45:00",
+    "id": "bt-2026-06-06T16:45:00-115",
+    "diaper_type": "wet"
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-06T16:14:00",
+    "id": "bt-2026-06-06T16:14:00-116",
+    "amount_ml": 43,
+    "duration_left_min": 6,
+    "duration_right_min": 6
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-06T15:17:00",
+    "id": "bt-2026-06-06T15:17:00-117",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 25,
+    "side": "R"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-06T12:28:00",
+    "id": "bt-2026-06-06T12:28:00-118",
+    "feed_type": "expressed",
+    "amount_ml": 70,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-06T11:41:00",
+    "id": "bt-2026-06-06T11:41:00-119",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 20,
+    "side": "R"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-06T11:39:00",
+    "id": "bt-2026-06-06T11:39:00-120",
+    "diaper_type": "wet"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-06T08:22:00",
+    "id": "bt-2026-06-06T08:22:00-121",
+    "feed_type": "formula",
+    "amount_ml": 20,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-06T08:10:00",
+    "id": "bt-2026-06-06T08:10:00-122",
+    "feed_type": "nursing",
+    "amount_ml": null,
+    "duration_min": 31,
+    "side": "R"
+  },
+  {
+    "kind": "diaper",
+    "at": "2026-06-06T06:05:00",
+    "id": "bt-2026-06-06T06:05:00-123",
+    "diaper_type": "mixed"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-06T05:27:00",
+    "id": "bt-2026-06-06T05:27:00-124",
+    "feed_type": "formula",
+    "amount_ml": 100,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-06T05:18:00",
+    "id": "bt-2026-06-06T05:18:00-125",
+    "amount_ml": 125,
+    "duration_left_min": 22,
+    "duration_right_min": 22
+  },
+  {
+    "kind": "sleep",
+    "at": "2026-06-06T01:30:00",
+    "id": "bt-2026-06-06T01:30:00-126",
+    "duration_min": 236,
+    "ended_at": "2026-06-06T01:30:00"
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-06T01:16:00",
+    "id": "bt-2026-06-06T01:16:00-127",
+    "feed_type": "formula",
+    "amount_ml": 40,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "feed",
+    "at": "2026-06-06T01:16:00",
+    "id": "bt-2026-06-06T01:16:00-128",
+    "feed_type": "expressed",
+    "amount_ml": 60,
+    "duration_min": null,
+    "side": null
+  },
+  {
+    "kind": "pump",
+    "at": "2026-06-06T00:13:00",
+    "id": "bt-2026-06-06T00:13:00-129",
+    "amount_ml": 75,
+    "duration_left_min": 17,
+    "duration_right_min": 17
+  }
+]

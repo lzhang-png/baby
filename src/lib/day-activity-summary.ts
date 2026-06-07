@@ -1,5 +1,10 @@
 import type { ActivityItem } from "@/lib/types"
 
+export type DaySummarySegment = {
+  kind: ActivityItem["kind"]
+  text: string
+}
+
 function formatShortDuration(minutes: number) {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
@@ -12,7 +17,9 @@ function plural(count: number, singular: string) {
   return `${count} ${singular}${count === 1 ? "" : "s"}`
 }
 
-export function formatDayActivitySummary(activities: ActivityItem[]) {
+export function buildDayActivitySummary(
+  activities: ActivityItem[],
+): DaySummarySegment[] | null {
   if (activities.length === 0) return null
 
   let feeds = 0
@@ -41,24 +48,35 @@ export function formatDayActivitySummary(activities: ActivityItem[]) {
     }
   }
 
-  const parts: string[] = []
+  const segments: DaySummarySegment[] = []
 
   if (feeds > 0) {
-    parts.push(
-      feedMl > 0
-        ? `${plural(feeds, "feed")} · ${feedMl} ml`
-        : plural(feeds, "feed"),
-    )
+    segments.push({
+      kind: "feed",
+      text:
+        feedMl > 0
+          ? `${plural(feeds, "feed")} · ${feedMl} ml`
+          : plural(feeds, "feed"),
+    })
   }
-  if (diapers > 0) parts.push(plural(diapers, "diaper"))
+  if (diapers > 0) {
+    segments.push({ kind: "diaper", text: plural(diapers, "diaper") })
+  }
   if (pumps > 0) {
-    parts.push(
-      pumpMl > 0
-        ? `${plural(pumps, "pump")} · ${pumpMl} ml`
-        : plural(pumps, "pump"),
-    )
+    segments.push({
+      kind: "pump",
+      text:
+        pumpMl > 0
+          ? `${plural(pumps, "pump")} · ${pumpMl} ml`
+          : plural(pumps, "pump"),
+    })
   }
-  if (sleepMin > 0) parts.push(`${formatShortDuration(sleepMin)} sleep`)
+  if (sleepMin > 0) {
+    segments.push({
+      kind: "sleep",
+      text: `${formatShortDuration(sleepMin)} sleep`,
+    })
+  }
 
-  return parts.length > 0 ? parts.join(" · ") : null
+  return segments.length > 0 ? segments : null
 }

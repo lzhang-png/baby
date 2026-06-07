@@ -7,8 +7,10 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
+import { DayActivitySummary } from "@/components/today/day-activity-summary"
 import {
+  LOG_CARD_ESTIMATED_HEIGHT_PX,
+  LOG_CARD_LEFT_OFFSET_PX,
   RecordedEventConnectors,
   RecordedEvents,
   type PlacedActivity,
@@ -19,8 +21,8 @@ import {
   getImportedActivitiesForDay,
   mergeActivities,
 } from "@/lib/baby-tracker-import"
-import { formatDayActivitySummary } from "@/lib/day-activity-summary"
 import { formatDayHeading, isSameDay, startOfDay } from "@/lib/format"
+import { expandActivitiesForTimeline } from "@/lib/sleep-timeline"
 import type { ActivityItem } from "@/lib/types"
 import type { ActivityKind } from "@/lib/schedule-data"
 import {
@@ -30,6 +32,7 @@ import {
   getSpreadTimelineLayout,
   getStageDayItems,
   getTimelineItemState,
+  DEFAULT_RECORDED_LABEL_EDGE_GAP_PX,
   spreadLabelPositions,
 } from "@/lib/schedule-utils"
 import { cn } from "@/lib/utils"
@@ -43,8 +46,12 @@ const CHECKPOINT_ICONS: Record<CheckpointIconKind, LucideIcon> = {
   bath: BathIcon,
 }
 
+const SCHEDULE_PANEL_WIDTH = "38%"
+const LOGS_PANEL_WIDTH = "62%"
+const SCHEDULE_PANEL_RATIO = 0.38
+
 const SCHEDULE_GRID =
-  "grid-cols-[3.75rem_1.25rem_minmax(0,1fr)] gap-x-3"
+  "grid-cols-[minmax(0,1fr)_1.25rem] gap-x-2"
 
 const ICON_COLORS: Record<CheckpointIconKind, string> = {
   wake: "text-amber-400",
@@ -126,12 +133,8 @@ function ProgressDot({ state }: { state: "past" | "current" | "future" }) {
     <span
       aria-hidden
       className={cn(
-        "relative z-10 inline-block shrink-0 rounded-full border-2 transition-all duration-500",
-        state === "past" && "bg-primary border-primary size-3",
-        state === "current" &&
-          "bg-primary border-primary ring-primary/40 size-3.5 ring-4",
-        state === "future" &&
-          "border-muted-foreground/50 size-3 bg-transparent",
+        "relative z-30 inline-block shrink-0 rounded-full transition-all duration-500",
+        state === "future" ? "size-2 bg-muted-foreground" : "size-3 bg-primary",
       )}
     />
   )
@@ -216,30 +219,29 @@ export function DayTimelineSection({
     return layout.getProgressPx(nowLayoutMin)
   }, [isToday, layout, nowLayoutMin])
 
-  const dayLogSummary = useMemo(
-    () => formatDayActivitySummary(activities),
-    [activities],
-  )
-
   const recordedEvents = useMemo((): PlacedActivity[] => {
-    const sorted = [...activities].sort(
-      (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime(),
-    )
+    const timelineEvents = expandActivitiesForTimeline(activities, date, now)
 
-    const placed = sorted.map((item) => ({
-      item,
-      id: `${item.kind}-${item.data.id}`,
-      anchorY: getActivityPositionPx(item.at, items, layout),
+    const placed = timelineEvents.map((event) => ({
+      item: event.item,
+      id: event.id,
+      displayAt: event.at,
+      sleepPhase: event.sleepPhase,
+      anchorY: getActivityPositionPx(event.at, items, layout),
       labelY: 0,
     }))
 
-    const labelYs = spreadLabelPositions(placed.map((event) => event.anchorY))
+    const labelYs = spreadLabelPositions(
+      placed.map((event) => event.anchorY),
+      DEFAULT_RECORDED_LABEL_EDGE_GAP_PX,
+      LOG_CARD_ESTIMATED_HEIGHT_PX,
+    )
 
     return placed.map((event, index) => ({
       ...event,
       labelY: labelYs[index],
     }))
-  }, [activities, items, layout])
+  }, [activities, date, now, items, layout])
 
   useEffect(() => {
     function measure() {
@@ -251,7 +253,8 @@ export function DayTimelineSection({
       const barRect = bar.getBoundingClientRect()
       setConnectorMetrics({
         barX: barRect.left + barRect.width / 2 - rootRect.left,
-        connectorX: rootRect.width * 0.52,
+        connectorX:
+          rootRect.width * SCHEDULE_PANEL_RATIO + LOG_CARD_LEFT_OFFSET_PX,
       })
     }
 
@@ -277,49 +280,53 @@ export function DayTimelineSection({
 
         <div
           className={cn(
-            "pointer-events-none absolute left-0 z-0 grid w-[52%]",
+            "pointer-events-none absolute left-0 z-0 grid",
             SCHEDULE_GRID,
           )}
-          style={{ top: 0, height: layout.height }}
+          style={{ top: 0, height: layout.height, width: SCHEDULE_PANEL_WIDTH }}
         >
           <div />
           <div className="flex h-full justify-center">
             <div
               ref={barRef}
-              className="bg-muted relative h-full w-[2px]"
+              className="bg-muted relative z-0 h-full w-[2px]"
             >
               <div
-                className="bg-primary absolute top-0 w-full transition-[height] duration-500 ease-out"
+                className="bg-primary absolute top-0 left-1/2 w-px -translate-x-1/2 transition-[height] duration-500 ease-out"
                 style={{ height: `${progressPercent}%` }}
               />
             </div>
           </div>
-          <div />
         </div>
+
+        {nowPositionY !== null && (
+          <div
+            className="pointer-events-none absolute inset-x-0 z-0 flex -translate-y-1/2 items-center gap-2 px-1"
+            style={{ top: nowPositionY }}
+          >
+            <div className="w-14 shrink-0" aria-hidden />
+            <div aria-hidden className="bg-muted h-px min-w-0 flex-1" />
+          </div>
+        )}
 
         <div
           ref={dayStartRef}
           className={cn(
-            "absolute left-0 z-10 grid w-[52%] -translate-y-1/2",
+            "absolute left-0 z-10 grid -translate-y-1/2",
             SCHEDULE_GRID,
           )}
-          style={{ top: layout.midnightY }}
+          style={{ top: layout.midnightY, width: SCHEDULE_PANEL_WIDTH }}
         >
-          <time
-            dateTime={date.toISOString()}
-            className={cn(
-              "self-center text-xs font-medium tabular-nums",
-              checkpointTone(dayHeaderDotState),
-            )}
-          >
-            12:00 AM
-          </time>
-
-          <div className="relative z-20 flex items-center justify-center">
-            <ProgressDot state={dayHeaderDotState} />
-          </div>
-
-          <div className="min-w-0 self-center">
+          <div className="min-w-0 self-center pr-1 text-right">
+            <time
+              dateTime={date.toISOString()}
+              className={cn(
+                "block text-xs font-medium tabular-nums",
+                checkpointTone(dayHeaderDotState),
+              )}
+            >
+              12:00 AM
+            </time>
             <h2
               className={cn(
                 "text-foreground text-lg leading-tight font-bold tracking-tight",
@@ -331,6 +338,10 @@ export function DayTimelineSection({
             <p className="text-muted-foreground text-xs">
               {stage.tab} · {stage.title}
             </p>
+          </div>
+
+          <div className="relative z-30 flex items-center justify-center">
+            <ProgressDot state={dayHeaderDotState} />
           </div>
         </div>
 
@@ -345,27 +356,25 @@ export function DayTimelineSection({
             <div
               key={`${item.time}-${item.label}`}
               className={cn(
-                "absolute left-0 grid w-[52%] -translate-y-1/2",
+                "absolute left-0 z-10 grid -translate-y-1/2",
                 SCHEDULE_GRID,
               )}
-              style={{ top: layout.positions[index] }}
+              style={{
+                top: layout.positions[index],
+                width: SCHEDULE_PANEL_WIDTH,
+              }}
             >
-              <time
-                dateTime={item.time}
-                className={cn(
-                  "self-center text-xs font-medium tabular-nums",
-                  checkpointTone(state),
-                )}
-              >
-                {item.time}
-              </time>
-
-              <div className="relative z-20 flex items-center justify-center">
-                <ProgressDot state={state} />
-              </div>
-
-              <div className="min-w-0 self-center">
-                <div className="flex flex-wrap items-center gap-2">
+              <div className="min-w-0 self-center pr-1 text-right">
+                <time
+                  dateTime={item.time}
+                  className={cn(
+                    "block text-xs font-medium tabular-nums",
+                    checkpointTone(state),
+                  )}
+                >
+                  {item.time}
+                </time>
+                <div className="flex flex-wrap items-center justify-end gap-1.5">
                   <CheckpointIcons
                     label={item.label}
                     kind={item.kind}
@@ -375,59 +384,63 @@ export function DayTimelineSection({
                     className={cn(
                       "text-sm leading-snug",
                       checkpointTone(state),
-                      state === "current" && "font-medium text-foreground",
                     )}
                   >
                     {item.label}
                   </p>
                 </div>
               </div>
+
+              <div className="relative z-30 flex items-center justify-center">
+                <ProgressDot state={state} />
+              </div>
             </div>
           )
         })}
 
         {nowPositionY !== null && (
-          <div
-            ref={registerNowRef}
-            className={cn(
-              "absolute left-0 z-30 grid w-[52%] -translate-y-1/2",
-              SCHEDULE_GRID,
-            )}
-            style={{ top: nowPositionY }}
-          >
-            <time
-              dateTime={now.toISOString()}
-              className="text-primary self-center text-xs font-semibold tabular-nums"
+          <>
+            <div
+              className={cn(
+                "pointer-events-none absolute left-0 z-40 grid -translate-y-1/2",
+                SCHEDULE_GRID,
+              )}
+              style={{ top: nowPositionY, width: SCHEDULE_PANEL_WIDTH }}
             >
-              {nowLabel}
-            </time>
-
-            <div className="relative z-20 flex items-center justify-center">
-              <span
-                aria-hidden
-                className="bg-primary border-primary relative inline-block size-3.5 shrink-0 rounded-full border-2 ring-4 ring-primary/40"
-              />
+              <div />
+              <div className="relative flex items-center justify-center">
+                <span
+                  aria-hidden
+                  className="bg-primary border-primary relative z-[1] inline-block size-3.5 shrink-0 rounded-full border-2 ring-4 ring-primary/40"
+                />
+              </div>
             </div>
 
-            <div className="min-w-0 self-center">
-              <Badge className="h-5 px-2 text-[11px] font-semibold">Now</Badge>
+            <div
+              ref={registerNowRef}
+              className="pointer-events-none absolute inset-x-0 z-50 -translate-y-1/2 px-1"
+              style={{ top: nowPositionY }}
+            >
+              <time
+                dateTime={now.toISOString()}
+                className="bg-secondary text-secondary-foreground inline-block rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums"
+              >
+                {nowLabel}
+              </time>
             </div>
-          </div>
+          </>
         )}
 
         <div
-          className="absolute top-0 right-0 w-[48%]"
-          style={{ height: layout.height }}
+          className="absolute top-0 right-0 z-20"
+          style={{ height: layout.height, width: LOGS_PANEL_WIDTH }}
         >
-          {dayLogSummary && (
-            <p
-              className="text-foreground/90 absolute right-0 left-0 -translate-y-1/2 px-1 text-right text-xs leading-snug font-medium"
-              style={{ top: layout.midnightY }}
-            >
-              {dayLogSummary}
-            </p>
-          )}
-          <RecordedEvents events={recordedEvents} loading={loading} />
+          <DayActivitySummary
+            activities={activities}
+            className="absolute right-0 left-6 -translate-y-1/2 text-left"
+            style={{ top: layout.midnightY }}
+          />
+          <RecordedEvents events={recordedEvents} loading={loading} now={now} />
         </div>
       </div>
     </section>

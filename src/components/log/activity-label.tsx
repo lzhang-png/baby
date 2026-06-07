@@ -1,5 +1,9 @@
 import type { ActivityItem } from "@/lib/types"
-import { formatDuration, formatTime } from "@/lib/format"
+import { formatCompactDuration, formatDuration, formatTime } from "@/lib/format"
+import {
+  getSleepDurationMinutes,
+  type SleepTimelinePhase,
+} from "@/lib/sleep-timeline"
 
 const FEED_LABELS: Record<string, string> = {
   nursing: "Nursing",
@@ -15,7 +19,15 @@ const DIAPER_LABELS: Record<string, string> = {
   dry: "Dry",
 }
 
-export function activitySummary(item: ActivityItem): string {
+type ActivityLabelOptions = {
+  sleepPhase?: SleepTimelinePhase
+  now?: Date
+}
+
+export function activitySummary(
+  item: ActivityItem,
+  options?: ActivityLabelOptions,
+): string {
   switch (item.kind) {
     case "feed": {
       const f = item.data
@@ -27,7 +39,22 @@ export function activitySummary(item: ActivityItem): string {
     }
     case "sleep": {
       const s = item.data
-      if (!s.ended_at) return "Sleeping…"
+      const now = options?.now ?? new Date()
+      const duration = formatCompactDuration(getSleepDurationMinutes(s, now))
+      const phase = options?.sleepPhase
+
+      if (phase === "start") {
+        return s.ended_at
+          ? `Sleep started · ${duration}`
+          : `Sleeping · ${duration}`
+      }
+      if (phase === "end") {
+        return s.ended_at
+          ? `Sleep ended · ${duration}`
+          : `Still sleeping · ${duration}`
+      }
+
+      if (!s.ended_at) return `Sleeping · ${duration}`
       return `Slept ${formatDuration(s.duration_min)}`
     }
     case "diaper":
@@ -44,6 +71,6 @@ export function activitySummary(item: ActivityItem): string {
   }
 }
 
-export function activityTime(item: ActivityItem): string {
-  return formatTime(item.at)
+export function activityTime(item: ActivityItem, displayAt?: string): string {
+  return formatTime(displayAt ?? item.at)
 }

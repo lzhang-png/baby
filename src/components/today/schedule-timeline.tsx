@@ -125,16 +125,16 @@ function getActiveDayKey(
 }
 
 export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
-  const today = startOfDay(new Date())
-  const [days, setDays] = useState(() =>
-    buildDayRange(today, INITIAL_PAST_DAYS, INITIAL_FUTURE_DAYS),
-  )
   const [now, setNow] = useState(() => new Date())
+  const todayKey = dateKey(now)
+  const today = useMemo(() => startOfDay(now), [todayKey])
+  const [days, setDays] = useState(() =>
+    buildDayRange(startOfDay(new Date()), INITIAL_PAST_DAYS, INITIAL_FUTURE_DAYS),
+  )
   const [nowOffset, setNowOffset] = useState<NowScrollOffset>("at")
   const [activeDayKey, setActiveDayKey] = useState<string | null>(() =>
-    dateKey(today),
+    dateKey(startOfDay(new Date())),
   )
-  const [anchorVersion, setAnchorVersion] = useState(0)
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const pillsRef = useRef<HTMLDivElement>(null)
@@ -168,7 +168,7 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
         })
       })
     },
-    [today],
+    [todayKey, today],
   )
 
   const loadPastDays = useCallback(() => {
@@ -251,7 +251,7 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
 
     scrollToTarget(scrollEl, target, "auto")
     hasScrolledToTodayRef.current = true
-  }, [days, anchorVersion])
+  }, [days])
 
   const syncActiveDay = useCallback(() => {
     const scrollEl = scrollRef.current
@@ -303,7 +303,7 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
       scrollEl.removeEventListener("scroll", updateScrollState)
       window.removeEventListener("resize", updateScrollState)
     }
-  }, [days, now, anchorVersion, syncActiveDay])
+  }, [days, now, syncActiveDay])
 
   useEffect(() => {
     if (!activeDayKey || !pillsRef.current) return
@@ -320,7 +320,14 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
 
   const registerNowRef = useCallback((el: HTMLDivElement | null) => {
     nowNodeRef.current = el
-    if (el) setAnchorVersion((version) => version + 1)
+    if (el && !hasScrolledToTodayRef.current) {
+      requestAnimationFrame(() => {
+        const scrollEl = scrollRef.current
+        if (!scrollEl || hasScrolledToTodayRef.current) return
+        scrollToTarget(scrollEl, el, "auto")
+        hasScrolledToTodayRef.current = true
+      })
+    }
   }, [])
 
   const registerDayStartRef = useCallback(
@@ -332,13 +339,25 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
         dayStartRefs.current.delete(key)
       }
 
-      if (isSameDay(date, today)) {
+      if (key === todayKey) {
         todayDayStartRef.current = el
+        if (
+          el &&
+          !hasScrolledToTodayRef.current &&
+          !nowNodeRef.current
+        ) {
+          requestAnimationFrame(() => {
+            const scrollEl = scrollRef.current
+            if (!scrollEl || hasScrolledToTodayRef.current) return
+            scrollToTarget(scrollEl, el, "auto")
+            hasScrolledToTodayRef.current = true
+          })
+        }
       }
 
       if (el) requestAnimationFrame(syncActiveDay)
     },
-    [today, syncActiveDay],
+    [todayKey, syncActiveDay],
   )
 
   const scrollToDay = useCallback(
@@ -416,7 +435,7 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
         />
       </div>
 
-      {nowOffset !== "at" && days.some((date) => isSameDay(date, today)) && (
+      {nowOffset !== "at" && days.some((date) => dateKey(date) === todayKey) && (
         <Button
           variant="secondary"
           aria-label={

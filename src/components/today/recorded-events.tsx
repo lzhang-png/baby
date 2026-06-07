@@ -24,17 +24,23 @@ import {
 import { useActivityRefresh } from "@/contexts/activity-refresh-context"
 import { deleteActivity } from "@/lib/api/logs"
 import { isEditableActivity } from "@/lib/activity-utils"
+import type { SleepTimelinePhase } from "@/lib/sleep-timeline"
 import type { ActivityItem } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
-const RECORDED_ICONS: Record<ActivityItem["kind"], LucideIcon> = {
+export const RECORDED_ICONS: Record<ActivityItem["kind"], LucideIcon> = {
   feed: MilkIcon,
   sleep: MoonIcon,
   diaper: DropletsIcon,
   pump: PumpIcon,
 }
 
-const RECORDED_COLORS: Record<ActivityItem["kind"], string> = {
+export const LOG_CARD_LEFT_OFFSET_PX = 24 // matches left-6 on card wrapper
+export const LOG_CARD_ESTIMATED_HEIGHT_PX = 46
+
+const EVENT_CARD_MAX_WIDTH = "max-w-[220px]"
+
+export const RECORDED_COLORS: Record<ActivityItem["kind"], string> = {
   feed: "text-sky-400",
   sleep: "text-indigo-400",
   diaper: "text-emerald-400",
@@ -46,33 +52,46 @@ export type PlacedActivity = {
   id: string
   anchorY: number
   labelY: number
+  displayAt: string
+  sleepPhase?: SleepTimelinePhase
 }
 
 type RecordedEventsProps = {
   events: PlacedActivity[]
   loading?: boolean
+  now: Date
 }
 
 type EventCardProps = {
-  item: ActivityItem
+  event: PlacedActivity
+  now: Date
   onEdit: (item: ActivityItem) => void
   onDelete: (item: ActivityItem) => void
 }
 
-function EventCard({ item, onEdit, onDelete }: EventCardProps) {
+function EventCard({ event, now, onEdit, onDelete }: EventCardProps) {
+  const { item, displayAt, sleepPhase } = event
   const Icon = RECORDED_ICONS[item.kind]
-  const editable = isEditableActivity(item)
+  const editable =
+    isEditableActivity(item) && (!sleepPhase || sleepPhase === "start")
 
   return (
-    <div className="bg-card flex items-start gap-2 rounded-lg border px-2.5 py-1.5 shadow-sm">
+    <div
+      className={cn(
+        "bg-card flex w-full items-start gap-2 rounded-lg border px-2.5 py-1.5 shadow-sm",
+        EVENT_CARD_MAX_WIDTH,
+      )}
+    >
       <Icon
         aria-hidden
         className={cn("mt-0.5 size-3.5 shrink-0", RECORDED_COLORS[item.kind])}
       />
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium tabular-nums">{activityTime(item)}</p>
+        <p className="text-xs font-medium tabular-nums">
+          {activityTime(item, displayAt)}
+        </p>
         <p className="text-muted-foreground text-[11px] leading-snug">
-          {activitySummary(item)}
+          {activitySummary(item, { sleepPhase, now })}
         </p>
       </div>
       {editable && (
@@ -81,19 +100,23 @@ function EventCard({ item, onEdit, onDelete }: EventCardProps) {
             <Button
               type="button"
               variant="ghost"
-              size="icon-xs"
+              size="icon"
               aria-label="Log options"
-              className="text-muted-foreground -mr-1 shrink-0"
+              className="text-muted-foreground shrink-0"
             >
-              <EllipsisVerticalIcon className="size-3.5" />
+              <EllipsisVerticalIcon className="size-4.5" />
             </Button>
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-32">
-            <DropdownMenuItem onClick={() => onEdit(item)}>
+          <DropdownMenuContent align="end" className="min-w-36 p-2">
+            <DropdownMenuItem
+              className="min-h-12 px-3 py-3 text-base font-medium"
+              onClick={() => onEdit(item)}
+            >
               Edit
             </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
+              className="min-h-12 px-3 py-3 text-base font-medium"
               onClick={() => onDelete(item)}
             >
               Delete
@@ -105,7 +128,7 @@ function EventCard({ item, onEdit, onDelete }: EventCardProps) {
   )
 }
 
-export function RecordedEvents({ events, loading }: RecordedEventsProps) {
+export function RecordedEvents({ events, loading, now }: RecordedEventsProps) {
   const { notifyActivityChanged } = useActivityRefresh()
   const [editingItem, setEditingItem] = useState<ActivityItem | null>(null)
 
@@ -130,11 +153,12 @@ export function RecordedEvents({ events, loading }: RecordedEventsProps) {
       {events.map((event) => (
         <div
           key={event.id}
-          className="absolute right-0 left-0 -translate-y-1/2"
+          className="absolute right-0 left-6 -translate-y-1/2"
           style={{ top: event.labelY }}
         >
           <EventCard
-            item={event.item}
+            event={event}
+            now={now}
             onEdit={setEditingItem}
             onDelete={handleDelete}
           />
@@ -168,7 +192,7 @@ export function RecordedEventConnectors({
   return (
     <svg
       aria-hidden
-      className="pointer-events-none absolute inset-0 h-full w-full overflow-visible"
+      className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible"
     >
       {events.map(({ id, anchorY, labelY }) => (
         <g key={id}>

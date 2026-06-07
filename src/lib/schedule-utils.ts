@@ -239,7 +239,7 @@ export function getActivityPositionPx(
 
 export const DEFAULT_RECORDED_GROUP_ANCHOR_GAP_PX = 24
 export const DEFAULT_RECORDED_GROUP_TIME_GAP_MIN = 30
-export const DEFAULT_RECORDED_LABEL_MIN_GAP_PX = 48
+export const DEFAULT_RECORDED_LABEL_EDGE_GAP_PX = 2
 
 export function getEventClockMinutes(at: string): number {
   return getClockMinutes(at)
@@ -281,9 +281,12 @@ export function clusterByProximity<T>(
 
 export function spreadLabelPositions(
   tops: number[],
-  minGapPx = 44,
+  minEdgeGapPx = DEFAULT_RECORDED_LABEL_EDGE_GAP_PX,
+  itemHeightPx = 46,
 ): number[] {
   if (tops.length === 0) return []
+
+  const minCenterGap = itemHeightPx + minEdgeGapPx
   const sorted = tops
     .map((top, index) => ({ top, index }))
     .sort((a, b) => a.top - b.top)
@@ -291,7 +294,7 @@ export function spreadLabelPositions(
   const result = new Array<number>(tops.length)
   let last = -Infinity
   for (const entry of sorted) {
-    const y = Math.max(entry.top, last + minGapPx)
+    const y = Math.max(entry.top, last + minCenterGap)
     result[entry.index] = y
     last = y
   }

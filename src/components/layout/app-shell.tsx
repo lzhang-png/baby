@@ -73,7 +73,7 @@ export function AppShell() {
   return (
     <ActivityRefreshProvider>
       <div className="bg-background flex h-svh flex-col overflow-hidden">
-      <main className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col px-4 sm:px-5">
+      <main className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col">
         <Outlet />
       </main>
 

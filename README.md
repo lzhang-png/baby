@@ -1,73 +1,85 @@
-# React + TypeScript + Vite
+# Luca's Baby Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Family login app for logging Luca’s feeds, sleep, diapers, and pumping — plus the 3-month feeding & sleep schedule.
 
-Currently, two official plugins are available:
+**Live:** https://lzhang-png.github.io/baby/
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Features
 
-## React Compiler
+- Email/password login for family members
+- Invite code to add partner or relatives to the same household
+- Log: feeding (nursing, formula, expressed, donated), sleep, diapers, pumping
+- Today timeline with daily counts
+- Schedule page (historical trends + 3-month plan)
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Supabase setup (required)
 
-## Expanding the ESLint configuration
+### 1. Create a Supabase project
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+1. Go to [supabase.com](https://supabase.com) → New project
+2. Copy **Project URL** and **anon public key** from Settings → API
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+### 2. Run the database schema
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+In Supabase Dashboard → **SQL Editor**, paste and run the full contents of:
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+supabase/schema.sql
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### 3. Configure Auth URLs
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+In Supabase → **Authentication** → **URL configuration**:
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+| Setting | Value |
+|---------|--------|
+| Site URL | `https://lzhang-png.github.io/baby/` |
+| Redirect URLs | `https://lzhang-png.github.io/baby/**`, `http://localhost:5173/**` |
+
+For local dev, you can disable **Confirm email** under Auth → Providers → Email (optional, speeds up testing).
+
+### 4. Environment variables
+
+```bash
+cp .env.example .env.local
 ```
+
+Fill in `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`.
+
+For GitHub Pages deploy, add the same values as repository **Secrets** → Actions:
+
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_ANON_KEY`
+
+## Local development
+
+```bash
+npm install
+npm run dev
+```
+
+Open http://localhost:5173/baby/
+
+## First account vs family members
+
+| Who | Sign up flow |
+|-----|----------------|
+| **First person (you)** | Sign up → leave invite code **blank** → creates household + Luca |
+| **Family members** | Sign up → enter **invite code** from Family page |
+
+Existing users sign in at `/login`.
+
+## Scripts
+
+```bash
+npm run dev      # local dev server
+npm run build    # production build
+npm run preview  # preview production build
+```
+
+## Stack
+
+- React 19 + Vite + TypeScript
+- shadcn/ui (radix-nova)
+- Supabase (Auth + PostgreSQL + RLS)
+- GitHub Pages + Actions

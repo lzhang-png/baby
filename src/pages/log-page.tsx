@@ -1,0 +1,449 @@
+import { useState } from "react"
+import { toast } from "sonner"
+
+import { useAuth } from "@/contexts/auth-context"
+import {
+  endSleep,
+  getActiveSleep,
+  insertDiaper,
+  insertFeed,
+  insertPump,
+  insertSleep,
+} from "@/lib/api/logs"
+import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/format"
+import type { DiaperType, FeedType, NursingSide } from "@/lib/types"
+import { Button } from "@/components/ui/button"
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+
+export function LogPage() {
+  const { user, baby } = useAuth()
+  const [when, setWhen] = useState(toDatetimeLocalValue())
+  const [notes, setNotes] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+
+  const [feedType, setFeedType] = useState<FeedType>("formula")
+  const [amountMl, setAmountMl] = useState("90")
+  const [durationMin, setDurationMin] = useState("20")
+  const [side, setSide] = useState<NursingSide>("R")
+
+  const [diaperType, setDiaperType] = useState<DiaperType>("wet")
+
+  const [pumpMl, setPumpMl] = useState("")
+  const [pumpLeft, setPumpLeft] = useState("15")
+  const [pumpRight, setPumpRight] = useState("15")
+
+  const [activeSleepId, setActiveSleepId] = useState<string | null>(null)
+
+  async function ensureBaby() {
+    if (!baby || !user) throw new Error("Missing baby or user")
+    return { babyId: baby.id, userId: user.id }
+  }
+
+  async function handleFeed(e: React.FormEvent) {
+    e.preventDefault()
+    setSubmitting(true)
+    try {
+      const { babyId, userId } = await ensureBaby()
+      await insertFeed({
+        babyId,
+        userId,
+        occurredAt: fromDatetimeLocalValue(when),
+        feedType,
+        amountMl: feedType !== "nursing" ? Number(amountMl) || undefined : undefined,
+        durationMin: feedType === "nursing" ? Number(durationMin) || undefined : undefined,
+        side: feedType === "nursing" ? side : undefined,
+        notes: notes || undefined,
+      })
+      toast.success("Feed logged")
+      setNotes("")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to log feed")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleSleepStart() {
+    setSubmitting(true)
+    try {
+      const { babyId, userId } = await ensureBaby()
+      const log = await insertSleep({
+        babyId,
+        userId,
+        startedAt: fromDatetimeLocalValue(when),
+        notes: notes || undefined,
+      })
+      setActiveSleepId(log.id)
+      toast.success("Sleep started")
+      setNotes("")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to start sleep")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleSleepEnd() {
+    setSubmitting(true)
+    try {
+      const { babyId } = await ensureBaby()
+      let sleepId = activeSleepId
+      if (!sleepId) {
+        const active = await getActiveSleep(babyId)
+        sleepId = active?.id ?? null
+      }
+      if (!sleepId) throw new Error("No active sleep to end")
+      await endSleep(sleepId, new Date().toISOString())
+      setActiveSleepId(null)
+      toast.success("Sleep ended")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to end sleep")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleSleepComplete(e: React.FormEvent) {
+    e.preventDefault()
+    setSubmitting(true)
+    try {
+      const { babyId, userId } = await ensureBaby()
+      const start = fromDatetimeLocalValue(when)
+      const end = new Date().toISOString()
+      const duration = Math.max(
+        1,
+        Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000),
+      )
+      await insertSleep({
+        babyId,
+        userId,
+        startedAt: start,
+        endedAt: end,
+        durationMin: duration,
+        notes: notes || undefined,
+      })
+      toast.success("Sleep logged")
+      setNotes("")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to log sleep")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handleDiaper(e: React.FormEvent) {
+    e.preventDefault()
+    setSubmitting(true)
+    try {
+      const { babyId, userId } = await ensureBaby()
+      await insertDiaper({
+        babyId,
+        userId,
+        occurredAt: fromDatetimeLocalValue(when),
+        diaperType,
+        notes: notes || undefined,
+      })
+      toast.success("Diaper logged")
+      setNotes("")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to log diaper")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function handlePump(e: React.FormEvent) {
+    e.preventDefault()
+    setSubmitting(true)
+    try {
+      const { babyId, userId } = await ensureBaby()
+      await insertPump({
+        babyId,
+        userId,
+        occurredAt: fromDatetimeLocalValue(when),
+        amountMl: pumpMl ? Number(pumpMl) : undefined,
+        durationLeftMin: Number(pumpLeft) || undefined,
+        durationRightMin: Number(pumpRight) || undefined,
+        notes: notes || undefined,
+      })
+      toast.success("Pump logged")
+      setNotes("")
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to log pump")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-semibold tracking-tight">Log activity</h1>
+        <p className="text-muted-foreground text-sm">
+          Quick-add feeds, sleep, diapers, and pumping for {baby?.name ?? "Luca"}.
+        </p>
+      </div>
+
+      <Tabs defaultValue="feed">
+        <TabsList>
+          <TabsTrigger value="feed">Feed</TabsTrigger>
+          <TabsTrigger value="sleep">Sleep</TabsTrigger>
+          <TabsTrigger value="diaper">Diaper</TabsTrigger>
+          <TabsTrigger value="pump">Pump</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="feed">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Feeding</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleFeed} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="feed-when">Time</Label>
+                  <Input
+                    id="feed-when"
+                    type="datetime-local"
+                    value={when}
+                    onChange={(e) => setWhen(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label>Type</Label>
+                  <Select
+                    value={feedType}
+                    onValueChange={(v) => setFeedType(v as FeedType)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="nursing">Nursing</SelectItem>
+                        <SelectItem value="formula">Formula</SelectItem>
+                        <SelectItem value="expressed">Expressed</SelectItem>
+                        <SelectItem value="donated">Donated milk</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+                {feedType === "nursing" ? (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="flex flex-col gap-2">
+                      <Label htmlFor="duration">Duration (min)</Label>
+                      <Input
+                        id="duration"
+                        type="number"
+                        min={1}
+                        value={durationMin}
+                        onChange={(e) => setDurationMin(e.target.value)}
+                      />
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <Label>Side</Label>
+                      <Select value={side} onValueChange={(v) => setSide(v as NursingSide)}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectGroup>
+                            <SelectItem value="L">Left</SelectItem>
+                            <SelectItem value="R">Right</SelectItem>
+                            <SelectItem value="both">Both</SelectItem>
+                          </SelectGroup>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="amount">Amount (ml)</Label>
+                    <Input
+                      id="amount"
+                      type="number"
+                      min={0}
+                      value={amountMl}
+                      onChange={(e) => setAmountMl(e.target.value)}
+                    />
+                  </div>
+                )}
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="feed-notes">Notes</Label>
+                  <Textarea
+                    id="feed-notes"
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows={2}
+                  />
+                </div>
+                <Button type="submit" disabled={submitting}>
+                  Log feed
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="sleep">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Sleep</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="sleep-when">Start time</Label>
+                <Input
+                  id="sleep-when"
+                  type="datetime-local"
+                  value={when}
+                  onChange={(e) => setWhen(e.target.value)}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  type="button"
+                  onClick={handleSleepStart}
+                  disabled={submitting}
+                >
+                  Start sleeping
+                </Button>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  onClick={handleSleepEnd}
+                  disabled={submitting}
+                >
+                  End sleep now
+                </Button>
+              </div>
+              <form onSubmit={handleSleepComplete} className="flex flex-col gap-4 border-t pt-4">
+                <p className="text-muted-foreground text-sm">
+                  Or log a completed nap in one step (uses start time above → now).
+                </p>
+                <Button type="submit" variant="outline" disabled={submitting}>
+                  Log completed sleep
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="diaper">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Diaper</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleDiaper} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="diaper-when">Time</Label>
+                  <Input
+                    id="diaper-when"
+                    type="datetime-local"
+                    value={when}
+                    onChange={(e) => setWhen(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label>Type</Label>
+                  <Select
+                    value={diaperType}
+                    onValueChange={(v) => setDiaperType(v as DiaperType)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="wet">Wet</SelectItem>
+                        <SelectItem value="dirty">Dirty</SelectItem>
+                        <SelectItem value="mixed">Mixed</SelectItem>
+                        <SelectItem value="dry">Dry</SelectItem>
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button type="submit" disabled={submitting}>
+                  Log diaper
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="pump">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Pumping</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handlePump} className="flex flex-col gap-4">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="pump-when">Time</Label>
+                  <Input
+                    id="pump-when"
+                    type="datetime-local"
+                    value={when}
+                    onChange={(e) => setWhen(e.target.value)}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="pump-ml">Amount (ml, optional)</Label>
+                  <Input
+                    id="pump-ml"
+                    type="number"
+                    min={0}
+                    value={pumpMl}
+                    onChange={(e) => setPumpMl(e.target.value)}
+                  />
+                </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="pump-l">Left (min)</Label>
+                    <Input
+                      id="pump-l"
+                      type="number"
+                      min={0}
+                      value={pumpLeft}
+                      onChange={(e) => setPumpLeft(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="pump-r">Right (min)</Label>
+                    <Input
+                      id="pump-r"
+                      type="number"
+                      min={0}
+                      value={pumpRight}
+                      onChange={(e) => setPumpRight(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <Button type="submit" disabled={submitting}>
+                  Log pump
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
+    </div>
+  )
+}

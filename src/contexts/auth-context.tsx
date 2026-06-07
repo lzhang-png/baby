@@ -61,41 +61,44 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
-    let mounted = true
-
-    supabase.auth.getSession().then(async ({ data }) => {
-      if (!mounted) return
-      setSession(data.session)
-      setUser(data.session?.user ?? null)
-      if (data.session) {
-        const result = await loadHouseholdData()
-        setHousehold(result.household)
-        setBaby(result.baby)
-      }
-      setLoading(false)
-    })
-
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (_event, nextSession) => {
+    } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+      // Keep this callback synchronous — awaiting Supabase calls here can
+      // deadlock token refresh and surface as unexpected logouts.
       setSession(nextSession)
       setUser(nextSession?.user ?? null)
-      if (nextSession) {
-        const result = await loadHouseholdData()
-        setHousehold(result.household)
-        setBaby(result.baby)
-      } else {
-        setHousehold(null)
-        setBaby(null)
-      }
       setLoading(false)
     })
 
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
+    return () => subscription.unsubscribe()
   }, [])
+
+  useEffect(() => {
+    if (!session) {
+      setHousehold(null)
+      setBaby(null)
+      return
+    }
+
+    let cancelled = false
+
+    loadHouseholdData()
+      .then((result) => {
+        if (cancelled) return
+        setHousehold(result.household)
+        setBaby(result.baby)
+      })
+      .catch(() => {
+        if (cancelled) return
+        setHousehold(null)
+        setBaby(null)
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [session])
 
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password })

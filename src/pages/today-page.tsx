@@ -7,7 +7,7 @@ export function TodayPage() {
   if (!baby) return null
 
   return (
-    <div className="flex min-h-[calc(100svh-5rem-env(safe-area-inset-bottom,0px)-3rem)] flex-col">
+    <div className="flex min-h-0 flex-1 flex-col">
       <ScheduleTimeline babyId={baby.id} />
     </div>
   )

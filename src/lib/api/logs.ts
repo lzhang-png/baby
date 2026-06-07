@@ -214,6 +214,150 @@ export async function getTodayActivities(babyId: string) {
   return getActivitiesForDay(babyId, new Date())
 }
 
+export async function updateFeed(
+  id: string,
+  input: {
+    occurredAt: string
+    feedType: FeedType
+    amountMl?: number | null
+    durationMin?: number | null
+    side?: NursingSide | null
+    notes?: string | null
+  },
+) {
+  const { data, error } = await supabase
+    .from("feed_logs")
+    .update({
+      occurred_at: input.occurredAt,
+      feed_type: input.feedType,
+      amount_ml: input.amountMl ?? null,
+      duration_min: input.durationMin ?? null,
+      side: input.side ?? null,
+      notes: input.notes ?? null,
+    })
+    .eq("id", id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as FeedLog
+}
+
+export async function deleteFeed(id: string) {
+  const { error } = await supabase.from("feed_logs").delete().eq("id", id)
+  if (error) throw error
+}
+
+export async function updateSleep(
+  id: string,
+  input: {
+    startedAt: string
+    endedAt?: string | null
+    notes?: string | null
+  },
+) {
+  const endedAt = input.endedAt ?? null
+  let durationMin: number | null = null
+  if (endedAt) {
+    const startMs = new Date(input.startedAt).getTime()
+    const endMs = new Date(endedAt).getTime()
+    durationMin = Math.max(1, Math.round((endMs - startMs) / 60000))
+  }
+
+  const { data, error } = await supabase
+    .from("sleep_logs")
+    .update({
+      started_at: input.startedAt,
+      ended_at: endedAt,
+      duration_min: durationMin,
+      notes: input.notes ?? null,
+    })
+    .eq("id", id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as SleepLog
+}
+
+export async function deleteSleep(id: string) {
+  const { error } = await supabase.from("sleep_logs").delete().eq("id", id)
+  if (error) throw error
+}
+
+export async function updateDiaper(
+  id: string,
+  input: {
+    occurredAt: string
+    diaperType: DiaperType
+    notes?: string | null
+  },
+) {
+  const { data, error } = await supabase
+    .from("diaper_logs")
+    .update({
+      occurred_at: input.occurredAt,
+      diaper_type: input.diaperType,
+      notes: input.notes ?? null,
+    })
+    .eq("id", id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as DiaperLog
+}
+
+export async function deleteDiaper(id: string) {
+  const { error } = await supabase.from("diaper_logs").delete().eq("id", id)
+  if (error) throw error
+}
+
+export async function updatePump(
+  id: string,
+  input: {
+    occurredAt: string
+    amountMl?: number | null
+    durationLeftMin?: number | null
+    durationRightMin?: number | null
+    notes?: string | null
+  },
+) {
+  const { data, error } = await supabase
+    .from("pump_logs")
+    .update({
+      occurred_at: input.occurredAt,
+      amount_ml: input.amountMl ?? null,
+      duration_left_min: input.durationLeftMin ?? null,
+      duration_right_min: input.durationRightMin ?? null,
+      notes: input.notes ?? null,
+    })
+    .eq("id", id)
+    .select()
+    .single()
+
+  if (error) throw error
+  return data as PumpLog
+}
+
+export async function deletePump(id: string) {
+  const { error } = await supabase.from("pump_logs").delete().eq("id", id)
+  if (error) throw error
+}
+
+export async function deleteActivity(item: ActivityItem) {
+  switch (item.kind) {
+    case "feed":
+      return deleteFeed(item.data.id)
+    case "sleep":
+      return deleteSleep(item.data.id)
+    case "diaper":
+      return deleteDiaper(item.data.id)
+    case "pump":
+      return deletePump(item.data.id)
+  }
+}
+
 export async function getActiveSleep(babyId: string): Promise<SleepLog | null> {
   const { data, error } = await supabase
     .from("sleep_logs")

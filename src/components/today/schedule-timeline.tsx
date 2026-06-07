@@ -1,427 +1,439 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import {
-  BathIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  MilkIcon,
-  MoonIcon,
-  SunIcon,
-  type LucideIcon,
-} from "lucide-react"
+import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
 
-import { Badge } from "@/components/ui/badge"
+import { DayTimelineSection } from "@/components/today/day-timeline-section"
 import { Button } from "@/components/ui/button"
-import {
-  RecordedEventConnectors,
-  RecordedEvents,
-  type PlacedActivity,
-} from "@/components/today/recorded-events"
-import { getActivitiesForDay } from "@/lib/api/logs"
-import {
-  clampNavigationDate,
-  getImportedActivitiesForDay,
-  getNavigationDateBounds,
-  mergeActivities,
-} from "@/lib/baby-tracker-import"
-import {
-  addDays,
-  formatDayHeading,
-  isSameDay,
-  startOfDay,
-} from "@/lib/format"
-import type { ActivityKind } from "@/lib/schedule-data"
-import {
-  getActivityPositionPx,
-  getCurrentStage,
-  getNowNormalizedMinutes,
-  getSpreadTimelineLayout,
-  getStageDayItems,
-  getTimelineItemState,
-  spreadLabelPositions,
-} from "@/lib/schedule-utils"
-import type { ActivityItem } from "@/lib/types"
-import { cn } from "@/lib/utils"
+import { getNavigationDateBounds } from "@/lib/baby-tracker-import"
+import { addDays, isSameDay, startOfDay } from "@/lib/format"
 
-type CheckpointIconKind = ActivityKind | "bath"
+const INITIAL_PAST_DAYS = 2
+const INITIAL_FUTURE_DAYS = 2
+const LOAD_BATCH = 3
+const FAB_BOTTOM = "calc(1rem + env(safe-area-inset-bottom, 0px))"
+const NOW_FAB_CLASS =
+  "fixed left-4 z-[60] h-12 gap-1.5 rounded-full px-4 shadow-lg"
 
-const CHECKPOINT_ICONS: Record<CheckpointIconKind, LucideIcon> = {
-  wake: SunIcon,
-  feed: MilkIcon,
-  sleep: MoonIcon,
-  bath: BathIcon,
-}
-
-const SCHEDULE_GRID =
-  "grid-cols-[3.75rem_1.25rem_minmax(0,1fr)] gap-x-3"
-
-const ICON_COLORS: Record<CheckpointIconKind, string> = {
-  wake: "text-amber-400",
-  feed: "text-sky-400",
-  sleep: "text-indigo-400",
-  bath: "text-cyan-400",
-}
-
-function iconColor(
-  iconKind: CheckpointIconKind,
-  state: "past" | "current" | "future",
-) {
-  return cn(
-    ICON_COLORS[iconKind],
-    state === "past" && "opacity-55",
-    state === "future" && "opacity-35",
-  )
-}
-
-function checkpointTone(state: "past" | "current" | "future") {
-  return state === "current" ? "text-foreground" : "text-muted-foreground"
-}
-
-function matchSegmentIconKind(text: string): CheckpointIconKind | null {
-  if (/\bwake\b|wind[- ]?down\b/i.test(text)) return "wake"
-  if (/\bbath\b/i.test(text)) return "bath"
-  if (/\bfeed\b/i.test(text)) return "feed"
-  if (/\b(?:bedtime|nap|catnap|sleep)\b/i.test(text)) return "sleep"
-  return null
-}
-
-function getCheckpointIconKinds(
-  label: string,
-  kind: ActivityKind,
-): CheckpointIconKind[] {
-  const isCompound = /[+/]/.test(label)
-  if (!isCompound) return [kind]
-
-  const kinds: CheckpointIconKind[] = []
-  for (const segment of label.split(/\s*[+/]\s*/)) {
-    const segmentKind = matchSegmentIconKind(segment)
-    if (segmentKind && !kinds.includes(segmentKind)) {
-      kinds.push(segmentKind)
-    }
-  }
-
-  return kinds.length >= 2 ? kinds : [kind]
-}
-
-function CheckpointIcons({
-  label,
-  kind,
-  state,
-}: {
-  label: string
-  kind: ActivityKind
-  state: "past" | "current" | "future"
-}) {
-  const kinds = getCheckpointIconKinds(label, kind)
-
-  return (
-    <span className="flex shrink-0 items-center gap-1">
-      {kinds.map((iconKind) => {
-        const Icon = CHECKPOINT_ICONS[iconKind]
-        return (
-          <Icon
-            key={iconKind}
-            aria-hidden
-            className={cn("size-4 shrink-0", iconColor(iconKind, state))}
-          />
-        )
-      })}
-    </span>
-  )
-}
-
-function ProgressDot({ state }: { state: "past" | "current" | "future" }) {
-  return (
-    <span
-      aria-hidden
-      className={cn(
-        "relative z-10 inline-block shrink-0 rounded-full border-2 transition-all duration-500",
-        state === "past" && "bg-primary border-primary size-3",
-        state === "current" &&
-          "bg-primary border-primary ring-primary/40 size-3.5 ring-4",
-        state === "future" &&
-          "border-muted-foreground/50 size-3 bg-transparent",
-      )}
-    />
-  )
-}
+type NowScrollOffset = "at" | "past" | "future"
 
 type ScheduleTimelineProps = {
   babyId: string
 }
 
-export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
-  const [viewDate, setViewDate] = useState(() => startOfDay(new Date()))
-  const [activities, setActivities] = useState<ActivityItem[]>([])
-  const [loading, setLoading] = useState(true)
-  const [now, setNow] = useState(() => new Date())
+function dateKey(date: Date) {
+  return startOfDay(date).toISOString()
+}
 
-  const stage = useMemo(() => getCurrentStage(viewDate), [viewDate])
-  const items = useMemo(() => getStageDayItems(stage), [stage])
-  const layout = useMemo(() => getSpreadTimelineLayout(items), [items])
+function buildAllNavigationDays() {
+  const { min, max } = getNavigationDateBounds()
+  const days: Date[] = []
 
-  const currentRef = useRef<HTMLDivElement>(null)
-  const scrollRef = useRef<HTMLDivElement>(null)
-  const timelineRef = useRef<HTMLDivElement>(null)
-  const barRef = useRef<HTMLDivElement>(null)
-  const [connectorMetrics, setConnectorMetrics] = useState({
-    barX: 0,
-    connectorX: 0,
-  })
+  for (let day = startOfDay(min); day <= max; day = addDays(day, 1)) {
+    days.push(new Date(day))
+  }
 
-  const isToday = isSameDay(viewDate, new Date())
-  const isPastDay = viewDate < startOfDay(new Date())
-  const isFutureDay = viewDate > startOfDay(new Date())
-  const bounds = getNavigationDateBounds()
-  const canGoPrev = startOfDay(viewDate) > bounds.min
-  const canGoNext = startOfDay(viewDate) < bounds.max
+  return days
+}
 
-  const load = useCallback(async () => {
-    setLoading(true)
-    try {
-      const logged = await getActivitiesForDay(babyId, viewDate)
-      const imported = getImportedActivitiesForDay(viewDate)
-      setActivities(mergeActivities(imported, logged))
-    } finally {
-      setLoading(false)
+function buildDayRange(anchor: Date, past: number, future: number) {
+  const { min, max } = getNavigationDateBounds()
+  const days: Date[] = []
+
+  for (let offset = -past; offset <= future; offset++) {
+    const day = startOfDay(addDays(anchor, offset))
+    if (day < min || day > max) continue
+    days.push(day)
+  }
+
+  return days
+}
+
+function mergeUniqueDays(existing: Date[], incoming: Date[]) {
+  const keys = new Set(existing.map(dateKey))
+  const merged = [...existing]
+
+  for (const day of incoming) {
+    const key = dateKey(day)
+    if (!keys.has(key)) {
+      keys.add(key)
+      merged.push(startOfDay(day))
     }
-  }, [babyId, viewDate])
+  }
+
+  return merged.sort((a, b) => a.getTime() - b.getTime())
+}
+
+function scrollToTarget(
+  scrollEl: HTMLDivElement,
+  target: HTMLElement,
+  behavior: ScrollBehavior = "smooth",
+) {
+  const scrollRect = scrollEl.getBoundingClientRect()
+  const targetRect = target.getBoundingClientRect()
+  const top =
+    scrollEl.scrollTop +
+    targetRect.top -
+    scrollRect.top -
+    scrollEl.clientHeight / 2 +
+    targetRect.height / 2
+  scrollEl.scrollTo({ top: Math.max(0, top), behavior })
+}
+
+function scrollToDayStart(
+  scrollEl: HTMLDivElement,
+  target: HTMLElement,
+  behavior: ScrollBehavior = "smooth",
+) {
+  const scrollRect = scrollEl.getBoundingClientRect()
+  const targetRect = target.getBoundingClientRect()
+  const topPadding = 12
+  const top =
+    scrollEl.scrollTop + targetRect.top - scrollRect.top - topPadding
+  scrollEl.scrollTo({ top: Math.max(0, top), behavior })
+}
+
+function shortDayLabel(date: Date, today: Date) {
+  if (isSameDay(date, today)) return "Today"
+  return date.toLocaleDateString([], { weekday: "short", day: "numeric" })
+}
+
+function getActiveDayKey(
+  scrollEl: HTMLDivElement,
+  dayStartRefs: Map<string, HTMLDivElement>,
+  navigationDays: Date[],
+) {
+  const anchorY = scrollEl.getBoundingClientRect().top + 12
+  let activeKey: string | null = null
+
+  for (const date of navigationDays) {
+    const key = dateKey(date)
+    const el = dayStartRefs.get(key)
+    if (!el) continue
+
+    if (el.getBoundingClientRect().top <= anchorY) {
+      activeKey = key
+    }
+  }
+
+  if (activeKey) return activeKey
+
+  for (const date of navigationDays) {
+    const key = dateKey(date)
+    if (dayStartRefs.has(key)) return key
+  }
+
+  return null
+}
+
+export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
+  const today = startOfDay(new Date())
+  const [days, setDays] = useState(() =>
+    buildDayRange(today, INITIAL_PAST_DAYS, INITIAL_FUTURE_DAYS),
+  )
+  const [now, setNow] = useState(() => new Date())
+  const [nowOffset, setNowOffset] = useState<NowScrollOffset>("at")
+  const [activeDayKey, setActiveDayKey] = useState<string | null>(() =>
+    dateKey(today),
+  )
+  const [anchorVersion, setAnchorVersion] = useState(0)
+
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const pillsRef = useRef<HTMLDivElement>(null)
+  const topSentinelRef = useRef<HTMLDivElement>(null)
+  const bottomSentinelRef = useRef<HTMLDivElement>(null)
+  const nowNodeRef = useRef<HTMLDivElement | null>(null)
+  const todayDayStartRef = useRef<HTMLDivElement | null>(null)
+  const dayStartRefs = useRef(new Map<string, HTMLDivElement>())
+  const navigationDays = useMemo(() => buildAllNavigationDays(), [])
+  const loadingMoreRef = useRef(false)
+  const hasScrolledToTodayRef = useRef(false)
 
   useEffect(() => {
-    load()
-  }, [load])
-
-  useEffect(() => {
-    if (!isToday) return
     const id = window.setInterval(() => setNow(new Date()), 60_000)
     return () => window.clearInterval(id)
-  }, [isToday])
+  }, [])
 
-  const nowNorm = isToday ? getNowNormalizedMinutes(now) : 0
+  const scrollToNow = useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      setNow(new Date())
 
-  const progressPercent = isPastDay
-    ? 100
-    : isFutureDay
-      ? 0
-      : layout.getProgressPercent(nowNorm)
+      const scrollEl = scrollRef.current
+      if (!scrollEl) return
 
-  const nowLabel = now.toLocaleTimeString([], {
-    hour: "numeric",
-    minute: "2-digit",
-  })
+      setDays((current) => mergeUniqueDays(current, [today]))
 
-  const placedActivities = useMemo((): PlacedActivity[] => {
-    const sorted = [...activities].sort(
-      (a, b) => new Date(a.at).getTime() - new Date(b.at).getTime(),
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const target = nowNodeRef.current ?? todayDayStartRef.current
+          if (target) scrollToTarget(scrollEl, target, behavior)
+        })
+      })
+    },
+    [today],
+  )
+
+  const loadPastDays = useCallback(() => {
+    const { min } = getNavigationDateBounds()
+    const first = days[0]
+    if (!first || startOfDay(first) <= min) return
+
+    const incoming: Date[] = []
+    for (let i = LOAD_BATCH; i >= 1; i--) {
+      const day = startOfDay(addDays(first, -i))
+      if (day < min) break
+      incoming.push(day)
+    }
+    if (incoming.length === 0) return
+
+    const scrollEl = scrollRef.current
+    const prevHeight = scrollEl?.scrollHeight ?? 0
+
+    setDays((current) => mergeUniqueDays(current, incoming))
+
+    requestAnimationFrame(() => {
+      if (scrollEl) {
+        scrollEl.scrollTop += scrollEl.scrollHeight - prevHeight
+      }
+    })
+  }, [days])
+
+  const loadFutureDays = useCallback(() => {
+    const { max } = getNavigationDateBounds()
+    const last = days[days.length - 1]
+    if (!last || startOfDay(last) >= max) return
+
+    const incoming: Date[] = []
+    for (let i = 1; i <= LOAD_BATCH; i++) {
+      const day = startOfDay(addDays(last, i))
+      if (day > max) break
+      incoming.push(day)
+    }
+    if (incoming.length === 0) return
+
+    setDays((current) => mergeUniqueDays(current, incoming))
+  }, [days])
+
+  useEffect(() => {
+    const scrollEl = scrollRef.current
+    const topSentinel = topSentinelRef.current
+    const bottomSentinel = bottomSentinelRef.current
+    if (!scrollEl || !topSentinel || !bottomSentinel) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          if (!entry.isIntersecting || loadingMoreRef.current) continue
+
+          loadingMoreRef.current = true
+          if (entry.target === topSentinel) {
+            loadPastDays()
+          } else if (entry.target === bottomSentinel) {
+            loadFutureDays()
+          }
+          window.setTimeout(() => {
+            loadingMoreRef.current = false
+          }, 200)
+        }
+      },
+      { root: scrollEl, rootMargin: "240px" },
     )
-    const anchorYs = sorted.map((item) =>
-      getActivityPositionPx(item.at, items, layout),
-    )
-    const labelYs = spreadLabelPositions(anchorYs)
 
-    return sorted.map((item, index) => ({
-      item,
-      id: `${item.kind}-${item.data.id}`,
-      anchorY: anchorYs[index],
-      labelY: labelYs[index],
-    }))
-  }, [activities, items, layout])
+    observer.observe(topSentinel)
+    observer.observe(bottomSentinel)
+    return () => observer.disconnect()
+  }, [loadPastDays, loadFutureDays])
+
+  useEffect(() => {
+    if (hasScrolledToTodayRef.current) return
+
+    const scrollEl = scrollRef.current
+    const target = nowNodeRef.current ?? todayDayStartRef.current
+    if (!scrollEl || !target) return
+
+    scrollToTarget(scrollEl, target, "auto")
+    hasScrolledToTodayRef.current = true
+  }, [days, anchorVersion])
+
+  const syncActiveDay = useCallback(() => {
+    const scrollEl = scrollRef.current
+    if (!scrollEl) return
+
+    const nextKey = getActiveDayKey(
+      scrollEl,
+      dayStartRefs.current,
+      navigationDays,
+    )
+    setActiveDayKey((current) => (current === nextKey ? current : nextKey))
+  }, [navigationDays])
 
   useEffect(() => {
     const scrollEl = scrollRef.current
     if (!scrollEl) return
 
-    const target = currentRef.current
-    if (target && isToday) {
-      const top =
-        target.offsetTop - scrollEl.clientHeight / 2 + target.clientHeight / 2
-      scrollEl.scrollTo({ top: Math.max(0, top), behavior: "smooth" })
-      return
+    const updateScrollState = () => {
+      syncActiveDay()
+
+      const target = nowNodeRef.current ?? todayDayStartRef.current
+      if (!target) {
+        setNowOffset("at")
+        return
+      }
+
+      const rootRect = scrollEl.getBoundingClientRect()
+      const targetRect = target.getBoundingClientRect()
+      const targetMidY = targetRect.top + targetRect.height / 2
+      const edgePadding = 72
+      const inView =
+        targetMidY >= rootRect.top + edgePadding &&
+        targetMidY <= rootRect.bottom - edgePadding
+
+      if (inView) {
+        setNowOffset("at")
+      } else if (targetMidY > rootRect.bottom - edgePadding) {
+        setNowOffset("past")
+      } else {
+        setNowOffset("future")
+      }
     }
 
-    scrollEl.scrollTo({ top: 0, behavior: "smooth" })
-  }, [viewDate, isToday, layout.height])
+    updateScrollState()
+    scrollEl.addEventListener("scroll", updateScrollState, { passive: true })
+    window.addEventListener("resize", updateScrollState)
+
+    return () => {
+      scrollEl.removeEventListener("scroll", updateScrollState)
+      window.removeEventListener("resize", updateScrollState)
+    }
+  }, [days, now, anchorVersion, syncActiveDay])
 
   useEffect(() => {
-    function measure() {
-      const root = timelineRef.current
-      const bar = barRef.current
-      if (!root || !bar) return
+    if (!activeDayKey || !pillsRef.current) return
 
-      const rootRect = root.getBoundingClientRect()
-      const barRect = bar.getBoundingClientRect()
-      setConnectorMetrics({
-        barX: barRect.left + barRect.width / 2 - rootRect.left,
-        connectorX: rootRect.width * 0.52,
-      })
-    }
-
-    measure()
-    window.addEventListener("resize", measure)
-    return () => window.removeEventListener("resize", measure)
-  }, [layout.height, placedActivities.length, viewDate])
-
-  function goDay(offset: number) {
-    setViewDate((current) =>
-      clampNavigationDate(addDays(current, offset)),
+    const activePill = pillsRef.current.querySelector(
+      `[data-day-key="${activeDayKey}"]`,
     )
-  }
+    activePill?.scrollIntoView({
+      inline: "nearest",
+      block: "nearest",
+      behavior: "smooth",
+    })
+  }, [activeDayKey])
+
+  const registerNowRef = useCallback((el: HTMLDivElement | null) => {
+    nowNodeRef.current = el
+    if (el) setAnchorVersion((version) => version + 1)
+  }, [])
+
+  const registerDayStartRef = useCallback(
+    (date: Date, el: HTMLDivElement | null) => {
+      const key = dateKey(date)
+      if (el) {
+        dayStartRefs.current.set(key, el)
+      } else {
+        dayStartRefs.current.delete(key)
+      }
+
+      if (isSameDay(date, today)) {
+        todayDayStartRef.current = el
+      }
+
+      if (el) requestAnimationFrame(syncActiveDay)
+    },
+    [today, syncActiveDay],
+  )
+
+  const scrollToDay = useCallback(
+    (date: Date, behavior: ScrollBehavior = "smooth") => {
+      const scrollEl = scrollRef.current
+      if (!scrollEl) return
+
+      setActiveDayKey(dateKey(date))
+
+      setDays((current) =>
+        mergeUniqueDays(
+          current,
+          buildDayRange(date, INITIAL_PAST_DAYS, INITIAL_FUTURE_DAYS),
+        ),
+      )
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          const target = dayStartRefs.current.get(dateKey(date))
+          if (target) scrollToDayStart(scrollEl, target, behavior)
+        })
+      })
+    },
+    [],
+  )
 
   return (
-    <section className="flex min-h-0 flex-1 flex-col">
-      <header className="bg-background/95 sticky top-0 z-20 flex items-center gap-2 border-b py-3 backdrop-blur">
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label="Previous day"
-          disabled={!canGoPrev}
-          onClick={() => goDay(-1)}
-        >
-          <ChevronLeftIcon />
-        </Button>
-
-        <div className="min-w-0 flex-1 text-center">
-          <h1 className="text-base font-semibold tracking-tight">
-            {formatDayHeading(viewDate)}
-          </h1>
-          <p className="text-muted-foreground truncate text-xs">
-            {stage.tab} · {stage.title}
-          </p>
-        </div>
-
-        <Button
-          variant="outline"
-          size="icon"
-          aria-label="Next day"
-          disabled={!canGoNext}
-          onClick={() => goDay(1)}
-        >
-          <ChevronRightIcon />
-        </Button>
-      </header>
-
-      <div className="grid grid-cols-2 gap-3 px-1 pt-3">
-        <p className="text-muted-foreground text-xs font-medium">Schedule</p>
-        <p className="text-muted-foreground text-xs font-medium">
-          Recorded
-          {!loading && (
-            <span className="text-muted-foreground/80">
-              {" "}
-              · {activities.length}
-            </span>
-          )}
-        </p>
-      </div>
-
-      <div
-        ref={scrollRef}
-        className="min-h-0 flex-1 overflow-y-auto pb-2"
-        style={{
-          maxHeight:
-            "calc(100svh - 5rem - env(safe-area-inset-bottom, 0px) - 7.5rem)",
-        }}
-      >
+    <section className="relative flex min-h-0 flex-1 flex-col">
+      <div className="bg-background/95 shrink-0 border-b backdrop-blur-sm">
         <div
-          ref={timelineRef}
-          className="relative px-1"
-          style={{ height: layout.height }}
+          ref={pillsRef}
+          className="flex gap-2 overflow-x-auto px-1 py-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          <RecordedEventConnectors
-            events={placedActivities}
-            barX={connectorMetrics.barX}
-            connectorX={connectorMetrics.connectorX}
-          />
-
-          <div
-            className={cn(
-              "pointer-events-none absolute left-0 grid w-[52%]",
-              SCHEDULE_GRID,
-            )}
-            style={{ top: layout.trackTop, height: layout.trackHeight }}
-          >
-            <div />
-            <div className="flex justify-center">
-              <div
-                ref={barRef}
-                className="bg-muted relative h-full w-[2px] overflow-hidden rounded-full"
-              >
-                <div
-                  className="bg-primary absolute top-0 w-full rounded-full transition-[height] duration-500 ease-out"
-                  style={{ height: `${progressPercent}%` }}
-                />
-              </div>
-            </div>
-            <div />
-          </div>
-
-          {items.map((item, index) => {
-            const state = isPastDay
-              ? "past"
-              : isFutureDay
-                ? "future"
-                : getTimelineItemState(index, items, nowNorm)
-
+          {navigationDays.map((date) => {
+            const key = dateKey(date)
+            const isActive = key === activeDayKey
             return (
-              <div
-                key={`${item.time}-${item.label}`}
-                ref={state === "current" ? currentRef : undefined}
-                className={cn(
-                  "absolute left-0 grid w-[52%] -translate-y-1/2",
-                  SCHEDULE_GRID,
-                )}
-                style={{ top: layout.positions[index] }}
+              <Button
+                key={key}
+                type="button"
+                data-day-key={key}
+                variant={isActive ? "default" : "secondary"}
+                size="sm"
+                className="shrink-0 rounded-full px-3"
+                aria-current={isActive ? "true" : undefined}
+                onClick={() => scrollToDay(date)}
               >
-                <time
-                  dateTime={item.time}
-                  className={cn(
-                    "self-center text-xs font-medium tabular-nums",
-                    checkpointTone(state),
-                  )}
-                >
-                  {item.time}
-                </time>
-
-                <div className="relative z-20 flex items-center justify-center">
-                  <ProgressDot state={state} />
-                </div>
-
-                <div className="min-w-0 self-center">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <CheckpointIcons
-                      label={item.label}
-                      kind={item.kind}
-                      state={state}
-                    />
-                    <p
-                      className={cn(
-                        "text-sm leading-snug",
-                        checkpointTone(state),
-                        state === "current" && "font-medium text-foreground",
-                      )}
-                    >
-                      {item.label}
-                    </p>
-                    {state === "current" && isToday && (
-                      <Badge
-                        variant="secondary"
-                        className="h-5 px-1.5 text-[10px]"
-                      >
-                        {nowLabel}
-                      </Badge>
-                    )}
-                  </div>
-                </div>
-              </div>
+                {shortDayLabel(date, today)}
+              </Button>
             )
           })}
-
-          <div
-            className="absolute top-0 right-0 w-[48%]"
-            style={{ height: layout.height }}
-          >
-            <RecordedEvents events={placedActivities} loading={loading} />
-          </div>
         </div>
       </div>
+
+      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+        <div ref={topSentinelRef} className="h-px shrink-0" aria-hidden />
+
+        {days.map((date) => (
+          <DayTimelineSection
+            key={dateKey(date)}
+            babyId={babyId}
+            date={date}
+            now={now}
+            registerNowRef={
+              isSameDay(date, today) ? registerNowRef : undefined
+            }
+            registerDayStartRef={registerDayStartRef}
+          />
+        ))}
+
+        <div
+          ref={bottomSentinelRef}
+          className="h-px shrink-0 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]"
+          aria-hidden
+        />
+      </div>
+
+      {nowOffset !== "at" && days.some((date) => isSameDay(date, today)) && (
+        <Button
+          variant="secondary"
+          aria-label={
+            nowOffset === "past" ? "Go down to now" : "Go up to now"
+          }
+          className={NOW_FAB_CLASS}
+          style={{ bottom: FAB_BOTTOM }}
+          onClick={() => scrollToNow()}
+        >
+          {nowOffset === "past" ? (
+            <ArrowDownIcon className="size-5" aria-hidden />
+          ) : (
+            <ArrowUpIcon className="size-5" aria-hidden />
+          )}
+          Now
+        </Button>
+      )}
     </section>
   )
 }

@@ -1,6 +1,9 @@
 import { useState } from "react"
+import { DropletsIcon, MilkIcon, MoonIcon } from "lucide-react"
 import { toast } from "sonner"
 
+import { PumpIcon } from "@/components/icons/pump-icon"
+import { useActivityRefresh } from "@/contexts/activity-refresh-context"
 import { useAuth } from "@/contexts/auth-context"
 import {
   endSleep,
@@ -13,12 +16,6 @@ import {
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/format"
 import type { DiaperType, FeedType, NursingSide } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import {
@@ -36,7 +33,28 @@ type LogPanelProps = {
   onLogged?: () => void
 }
 
+const LOG_TAB_CLASS =
+  "flex !h-auto min-h-0 flex-1 flex-col items-center gap-1 rounded-none border-0 bg-transparent px-2 py-2 text-[10px] font-medium leading-tight text-muted-foreground shadow-none transition-colors after:hidden hover:text-foreground data-active:bg-transparent data-active:text-primary data-active:shadow-none"
+
+const LOG_SUBMIT_CLASS = "h-10 w-full"
+
+function LogSection({
+  title,
+  children,
+}: {
+  title: string
+  children: React.ReactNode
+}) {
+  return (
+    <section className="flex flex-col gap-4">
+      <h2 className="font-heading text-base font-medium">{title}</h2>
+      {children}
+    </section>
+  )
+}
+
 export function LogPanel({ onLogged }: LogPanelProps) {
+  const { notifyActivityChanged } = useActivityRefresh()
   const { user, baby } = useAuth()
   const [when, setWhen] = useState(toDatetimeLocalValue())
   const [notes, setNotes] = useState("")
@@ -62,6 +80,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
 
   function afterSuccess() {
     setWhen(toDatetimeLocalValue())
+    notifyActivityChanged()
     onLogged?.()
   }
 
@@ -208,28 +227,10 @@ export function LogPanel({ onLogged }: LogPanelProps) {
   }
 
   return (
-    <Tabs defaultValue="feed">
-      <TabsList className="w-full">
-        <TabsTrigger value="feed" className="flex-1">
-          Feed
-        </TabsTrigger>
-        <TabsTrigger value="sleep" className="flex-1">
-          Sleep
-        </TabsTrigger>
-        <TabsTrigger value="diaper" className="flex-1">
-          Diaper
-        </TabsTrigger>
-        <TabsTrigger value="pump" className="flex-1">
-          Pump
-        </TabsTrigger>
-      </TabsList>
-
-      <TabsContent value="feed" className="mt-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Feeding</CardTitle>
-          </CardHeader>
-          <CardContent>
+    <Tabs defaultValue="feed" className="flex min-h-0 flex-1 flex-col gap-0">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-6">
+      <TabsContent value="feed" className="mt-0">
+        <LogSection title="Feeding">
             <form onSubmit={handleFeed} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="feed-when">Time</Label>
@@ -308,20 +309,20 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                   rows={2}
                 />
               </div>
-              <Button type="submit" disabled={submitting}>
+              <Button
+                type="submit"
+                variant="secondary"
+                className={LOG_SUBMIT_CLASS}
+                disabled={submitting}
+              >
                 Log feed
               </Button>
             </form>
-          </CardContent>
-        </Card>
+        </LogSection>
       </TabsContent>
 
-      <TabsContent value="sleep" className="mt-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Sleep</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-4">
+      <TabsContent value="sleep" className="mt-0">
+        <LogSection title="Sleep">
             <div className="flex flex-col gap-2">
               <Label htmlFor="sleep-when">Start time</Label>
               <Input
@@ -332,7 +333,12 @@ export function LogPanel({ onLogged }: LogPanelProps) {
               />
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button type="button" onClick={handleSleepStart} disabled={submitting}>
+              <Button
+                type="button"
+                variant="secondary"
+                onClick={handleSleepStart}
+                disabled={submitting}
+              >
                 Start sleeping
               </Button>
               <Button
@@ -355,16 +361,11 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                 Log completed sleep
               </Button>
             </form>
-          </CardContent>
-        </Card>
+        </LogSection>
       </TabsContent>
 
-      <TabsContent value="diaper" className="mt-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Diaper</CardTitle>
-          </CardHeader>
-          <CardContent>
+      <TabsContent value="diaper" className="mt-0">
+        <LogSection title="Diaper">
             <form onSubmit={handleDiaper} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="diaper-when">Time</Label>
@@ -394,20 +395,20 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                   </SelectContent>
                 </Select>
               </div>
-              <Button type="submit" disabled={submitting}>
+              <Button
+                type="submit"
+                variant="secondary"
+                className={LOG_SUBMIT_CLASS}
+                disabled={submitting}
+              >
                 Log diaper
               </Button>
             </form>
-          </CardContent>
-        </Card>
+        </LogSection>
       </TabsContent>
 
-      <TabsContent value="pump" className="mt-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">Pumping</CardTitle>
-          </CardHeader>
-          <CardContent>
+      <TabsContent value="pump" className="mt-0">
+        <LogSection title="Pumping">
             <form onSubmit={handlePump} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label htmlFor="pump-when">Time</Label>
@@ -450,13 +451,40 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                   />
                 </div>
               </div>
-              <Button type="submit" disabled={submitting}>
+              <Button
+                type="submit"
+                variant="secondary"
+                className={LOG_SUBMIT_CLASS}
+                disabled={submitting}
+              >
                 Log pump
               </Button>
             </form>
-          </CardContent>
-        </Card>
+        </LogSection>
       </TabsContent>
+      </div>
+
+      <TabsList
+        variant="line"
+        className="bg-background !h-auto w-full shrink-0 items-stretch justify-around gap-0 overflow-visible rounded-none border-0 p-0"
+      >
+        <TabsTrigger value="feed" className={LOG_TAB_CLASS}>
+          <MilkIcon aria-hidden className="size-5" />
+          Feed
+        </TabsTrigger>
+        <TabsTrigger value="sleep" className={LOG_TAB_CLASS}>
+          <MoonIcon aria-hidden className="size-5" />
+          Sleep
+        </TabsTrigger>
+        <TabsTrigger value="diaper" className={LOG_TAB_CLASS}>
+          <DropletsIcon aria-hidden className="size-5" />
+          Diaper
+        </TabsTrigger>
+        <TabsTrigger value="pump" className={LOG_TAB_CLASS}>
+          <PumpIcon aria-hidden className="size-5" />
+          Pump
+        </TabsTrigger>
+      </TabsList>
     </Tabs>
   )
 }

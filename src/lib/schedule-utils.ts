@@ -1,6 +1,6 @@
 import { STAGES, type Stage } from "@/lib/schedule-data"
 
-const DAY_ANCHOR_MINUTES = 7 * 60
+export const DAY_MINUTES = 24 * 60
 
 const MONTHS: Record<string, number> = {
   Jan: 0,
@@ -37,17 +37,23 @@ export function parseScheduleTime(time: string): number {
   return hours * 60 + minutes
 }
 
-export function normalizeDayMinutes(
-  minutes: number,
-  anchor = DAY_ANCHOR_MINUTES,
-): number {
-  if (minutes < anchor) return minutes + 24 * 60
-  return minutes
+export function getClockMinutes(value: Date | string): number {
+  const date = typeof value === "string" ? new Date(value) : value
+  return date.getHours() * 60 + date.getMinutes()
 }
 
+/** Clock minutes from midnight — each day timeline starts at 12:00 AM. */
+export function toTimelineLayoutMinutes(clockMinutes: number): number {
+  return clockMinutes
+}
+
+export function getNowLayoutMinutes(now = new Date()): number {
+  return toTimelineLayoutMinutes(getClockMinutes(now))
+}
+
+/** @deprecated Use getNowLayoutMinutes */
 export function getNowNormalizedMinutes(now = new Date()): number {
-  const minutes = now.getHours() * 60 + now.getMinutes()
-  return normalizeDayMinutes(minutes)
+  return getNowLayoutMinutes(now)
 }
 
 function parseShortDate(value: string, year: number): Date {
@@ -75,14 +81,16 @@ export function getCurrentStage(now = new Date()): Stage {
 }
 
 export function getStageDayItems(stage: Stage): ScheduleTimelineItem[] {
-  return stage.day.map((item) => {
-    const minutes = parseScheduleTime(item.time)
-    return {
-      ...item,
-      minutes,
-      normalizedMinutes: normalizeDayMinutes(minutes),
-    }
-  })
+  return stage.day
+    .map((item) => {
+      const minutes = parseScheduleTime(item.time)
+      return {
+        ...item,
+        minutes,
+        normalizedMinutes: toTimelineLayoutMinutes(minutes),
+      }
+    })
+    .sort((a, b) => a.normalizedMinutes - b.normalizedMinutes)
 }
 
 export type TimelineItemState = "past" | "current" | "future"
@@ -90,13 +98,13 @@ export type TimelineItemState = "past" | "current" | "future"
 export function getTimelineItemState(
   index: number,
   items: ScheduleTimelineItem[],
-  nowNorm = getNowNormalizedMinutes(),
+  nowLayoutMin = getNowLayoutMinutes(),
 ): TimelineItemState {
   const item = items[index]
   const next = items[index + 1]
 
-  if (nowNorm < item.normalizedMinutes) return "future"
-  if (!next || nowNorm < next.normalizedMinutes) return "current"
+  if (nowLayoutMin < item.normalizedMinutes) return "future"
+  if (!next || nowLayoutMin < next.normalizedMinutes) return "current"
   return "past"
 }
 
@@ -108,63 +116,65 @@ export type SegmentProgress = {
 export function getSegmentProgress(
   from: ScheduleTimelineItem,
   to: ScheduleTimelineItem,
-  nowNorm = getNowNormalizedMinutes(),
+  nowLayoutMin = getNowLayoutMinutes(),
 ): SegmentProgress {
-  if (nowNorm >= to.normalizedMinutes) {
+  if (nowLayoutMin >= to.normalizedMinutes) {
     return { state: "past", fillPercent: 100 }
   }
-  if (nowNorm <= from.normalizedMinutes) {
+  if (nowLayoutMin <= from.normalizedMinutes) {
     return { state: "future", fillPercent: 0 }
   }
 
   const fillPercent =
-    ((nowNorm - from.normalizedMinutes) /
+    ((nowLayoutMin - from.normalizedMinutes) /
       (to.normalizedMinutes - from.normalizedMinutes)) *
     100
 
   return { state: "partial", fillPercent }
 }
 
-export function getTimelineBounds(items: ScheduleTimelineItem[]) {
-  const start = items[0]?.normalizedMinutes ?? 0
-  const end = items[items.length - 1]?.normalizedMinutes ?? start
-  return { start, end, span: Math.max(end - start, 1) }
+export function getTimelineBounds() {
+  return { start: 0, end: DAY_MINUTES, span: DAY_MINUTES }
 }
 
 export function getTimelineProgressPercent(
-  items: ScheduleTimelineItem[],
-  nowNorm = getNowNormalizedMinutes(),
+  nowLayoutMin = getNowLayoutMinutes(),
 ): number {
-  if (items.length < 2) return 0
-
-  const { start, span } = getTimelineBounds(items)
-  return Math.min(100, Math.max(0, ((nowNorm - start) / span) * 100))
+  return Math.min(
+    100,
+    Math.max(0, (nowLayoutMin / DAY_MINUTES) * 100),
+  )
 }
 
-export function getItemPositionPercent(
-  item: ScheduleTimelineItem,
-  items: ScheduleTimelineItem[],
-): number {
-  const { start, span } = getTimelineBounds(items)
-  return ((item.normalizedMinutes - start) / span) * 100
+export function getItemPositionPercent(item: ScheduleTimelineItem): number {
+  return (item.normalizedMinutes / DAY_MINUTES) * 100
 }
 
-const DEFAULT_MIN_GAP_PX = 56
-const DEFAULT_PADDING_PX = 20
+export const DEFAULT_PX_PER_MINUTE = 3
 
 export type SpreadTimelineLayout = {
   height: number
   positions: number[]
   trackTop: number
   trackHeight: number
-  getProgressPx: (nowNorm?: number) => number
-  getProgressPercent: (nowNorm?: number) => number
+  midnightY: number
+  getProgressPx: (nowLayoutMin?: number) => number
+  getProgressPercent: (nowLayoutMin?: number) => number
+}
+
+function minutesToPositionPx(
+  layoutMinutes: number,
+  trackTop: number,
+  trackHeight: number,
+) {
+  const { start, end, span } = getTimelineBounds()
+  const clamped = Math.min(end, Math.max(start, layoutMinutes))
+  return trackTop + ((clamped - start) / span) * trackHeight
 }
 
 export function getSpreadTimelineLayout(
   items: ScheduleTimelineItem[],
-  minGapPx = DEFAULT_MIN_GAP_PX,
-  paddingPx = DEFAULT_PADDING_PX,
+  pxPerMinute = DEFAULT_PX_PER_MINUTE,
 ): SpreadTimelineLayout {
   if (items.length === 0) {
     return {
@@ -172,37 +182,24 @@ export function getSpreadTimelineLayout(
       positions: [],
       trackTop: 0,
       trackHeight: 0,
+      midnightY: 0,
       getProgressPx: () => 0,
       getProgressPercent: () => 0,
     }
   }
 
-  const positions = items.map((_, index) => paddingPx + index * minGapPx)
-  const height = paddingPx * 2 + Math.max(0, items.length - 1) * minGapPx
-  const trackTop = positions[0]
-  const trackHeight = Math.max(
-    positions[positions.length - 1] - trackTop,
-    1,
-  )
+  const { span } = getTimelineBounds()
+  const trackTop = 0
+  const trackHeight = span * pxPerMinute
+  const height = trackHeight
 
-  function getProgressPx(nowNorm = getNowNormalizedMinutes()) {
-    if (items.length === 1) return positions[0]
+  const toPx = (layoutMinutes: number) =>
+    minutesToPositionPx(layoutMinutes, trackTop, trackHeight)
 
-    if (nowNorm <= items[0].normalizedMinutes) return positions[0]
-    if (nowNorm >= items[items.length - 1].normalizedMinutes) {
-      return positions[positions.length - 1]
-    }
+  const positions = items.map((item) => toPx(item.normalizedMinutes))
 
-    for (let i = 0; i < items.length - 1; i++) {
-      const from = items[i].normalizedMinutes
-      const to = items[i + 1].normalizedMinutes
-      if (nowNorm >= from && nowNorm < to) {
-        const ratio = (nowNorm - from) / Math.max(to - from, 1)
-        return positions[i] + ratio * (positions[i + 1] - positions[i])
-      }
-    }
-
-    return positions[positions.length - 1]
+  function getProgressPx(nowLayoutMin = getNowLayoutMinutes()) {
+    return toPx(nowLayoutMin)
   }
 
   return {
@@ -210,53 +207,76 @@ export function getSpreadTimelineLayout(
     positions,
     trackTop,
     trackHeight,
+    midnightY: trackTop,
     getProgressPx,
-    getProgressPercent(nowNorm = getNowNormalizedMinutes()) {
-      const progressPx = getProgressPx(nowNorm)
-      return Math.min(
-        100,
-        Math.max(0, ((progressPx - trackTop) / trackHeight) * 100),
-      )
+    getProgressPercent(nowLayoutMin = getNowLayoutMinutes()) {
+      return getTimelineProgressPercent(nowLayoutMin)
     },
   }
 }
 
 export function getTimePositionPx(
-  normalizedMinutes: number,
-  items: ScheduleTimelineItem[],
+  layoutMinutes: number,
   layout: SpreadTimelineLayout,
 ): number {
-  const { positions } = layout
-  if (items.length === 0) return 0
-  if (items.length === 1) return positions[0]
-
-  if (normalizedMinutes <= items[0].normalizedMinutes) return positions[0]
-  if (normalizedMinutes >= items[items.length - 1].normalizedMinutes) {
-    return positions[positions.length - 1]
-  }
-
-  for (let i = 0; i < items.length - 1; i++) {
-    const from = items[i].normalizedMinutes
-    const to = items[i + 1].normalizedMinutes
-    if (normalizedMinutes >= from && normalizedMinutes < to) {
-      const ratio = (normalizedMinutes - from) / Math.max(to - from, 1)
-      return positions[i] + ratio * (positions[i + 1] - positions[i])
-    }
-  }
-
-  return positions[positions.length - 1]
+  return minutesToPositionPx(
+    layoutMinutes,
+    layout.trackTop,
+    layout.trackHeight,
+  )
 }
 
 export function getActivityPositionPx(
   at: string,
-  items: ScheduleTimelineItem[],
+  _items: ScheduleTimelineItem[],
   layout: SpreadTimelineLayout,
 ): number {
-  const date = new Date(at)
-  const minutes = normalizeDayMinutes(
-    date.getHours() * 60 + date.getMinutes(),
+  return getTimePositionPx(
+    toTimelineLayoutMinutes(getClockMinutes(at)),
+    layout,
   )
-  return getTimePositionPx(minutes, items, layout)
+}
+
+export const DEFAULT_RECORDED_GROUP_ANCHOR_GAP_PX = 24
+export const DEFAULT_RECORDED_GROUP_TIME_GAP_MIN = 30
+export const DEFAULT_RECORDED_LABEL_MIN_GAP_PX = 48
+
+export function getEventClockMinutes(at: string): number {
+  return getClockMinutes(at)
+}
+
+/** @deprecated Use getEventClockMinutes for time deltas */
+export function getEventNormalizedMinutes(at: string): number {
+  return getEventClockMinutes(at)
+}
+
+export function clusterByProximity<T>(
+  items: T[],
+  getAnchorY: (item: T) => number,
+  getMinutes: (item: T) => number,
+  anchorGapPx = DEFAULT_RECORDED_GROUP_ANCHOR_GAP_PX,
+  timeGapMin = DEFAULT_RECORDED_GROUP_TIME_GAP_MIN,
+): T[][] {
+  if (items.length === 0) return []
+
+  const sorted = [...items].sort((a, b) => getAnchorY(a) - getAnchorY(b))
+  const groups: T[][] = [[sorted[0]]]
+
+  for (let i = 1; i < sorted.length; i++) {
+    const item = sorted[i]
+    const group = groups[groups.length - 1]
+    const last = group[group.length - 1]
+    const anchorDelta = getAnchorY(item) - getAnchorY(last)
+    const timeDelta = getMinutes(item) - getMinutes(last)
+
+    if (anchorDelta <= anchorGapPx || timeDelta <= timeGapMin) {
+      group.push(item)
+    } else {
+      groups.push([item])
+    }
+  }
+
+  return groups
 }
 
 export function spreadLabelPositions(

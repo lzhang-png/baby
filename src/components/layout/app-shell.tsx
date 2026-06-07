@@ -1,23 +1,25 @@
 import { useState } from "react"
-import { NavLink, Outlet } from "react-router-dom"
+import { NavLink, Outlet, useLocation } from "react-router-dom"
 import {
   CalendarDaysIcon,
   CirclePlusIcon,
   ClipboardListIcon,
+  MenuIcon,
   UsersIcon,
   type LucideIcon,
 } from "lucide-react"
 
 import { LogPanel } from "@/components/log/log-panel"
+import { ActivityRefreshProvider } from "@/contexts/activity-refresh-context"
 import { Button } from "@/components/ui/button"
+import { Drawer, DrawerContent } from "@/components/ui/drawer"
 import {
-  Drawer,
-  DrawerContent,
-  DrawerDescription,
-  DrawerHeader,
-  DrawerTitle,
-} from "@/components/ui/drawer"
-import { useAuth } from "@/contexts/auth-context"
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
 type NavItem = {
@@ -27,82 +29,99 @@ type NavItem = {
 }
 
 const NAV: NavItem[] = [
-  { to: "/today", label: "Today", icon: CalendarDaysIcon },
+  { to: "/today", label: "Timeline", icon: CalendarDaysIcon },
   { to: "/schedule", label: "Schedule", icon: ClipboardListIcon },
   { to: "/family", label: "Family", icon: UsersIcon },
 ]
 
-function NavTab({ item }: { item: NavItem }) {
+const FAB_BOTTOM = "calc(1rem + env(safe-area-inset-bottom, 0px))"
+const FAB_CLASS = "size-14 rounded-full shadow-lg"
+
+function isNavItemActive(pathname: string, to: string) {
+  return pathname === to || pathname.endsWith(to)
+}
+
+function NavMenuItem({ item }: { item: NavItem }) {
+  const { pathname } = useLocation()
   const Icon = item.icon
+  const isActive = isNavItemActive(pathname, item.to)
 
   return (
-    <NavLink
-      to={item.to}
-      className={({ isActive }) =>
-        cn(
-          "flex min-w-0 flex-1 flex-col items-center gap-1 px-2 py-2 transition-colors",
-          isActive ? "text-primary" : "text-muted-foreground",
-        )
-      }
+    <DropdownMenuItem
+      asChild
+      className={cn(
+        "min-h-12 gap-3 px-3 py-3 text-base font-medium [&_svg]:size-5",
+        isActive &&
+          "bg-secondary text-foreground font-semibold focus:bg-secondary focus:text-foreground",
+      )}
     >
-      <Icon className="size-5 shrink-0" aria-hidden />
-      <span className="truncate text-[10px] font-medium leading-none">
+      <NavLink
+        to={item.to}
+        aria-current={isActive ? "page" : undefined}
+        className="flex w-full items-center gap-3"
+      >
+        <Icon aria-hidden />
         {item.label}
-      </span>
-    </NavLink>
+      </NavLink>
+    </DropdownMenuItem>
   )
 }
 
 export function AppShell() {
-  const { baby } = useAuth()
   const [logOpen, setLogOpen] = useState(false)
 
   return (
-    <div className="bg-background min-h-svh">
-      <main className="mx-auto max-w-5xl px-4 py-6 pb-[calc(5rem+env(safe-area-inset-bottom,0px))] sm:px-5">
+    <ActivityRefreshProvider>
+      <div className="bg-background flex h-svh flex-col overflow-hidden">
+      <main className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col px-4 sm:px-5">
         <Outlet />
       </main>
 
-      <nav
-        aria-label="Main navigation"
-        className="border-t bg-background/95 fixed inset-x-0 bottom-0 z-40 backdrop-blur supports-[backdrop-filter]:bg-background/80"
-        style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
-      >
-        <div className="mx-auto flex max-w-5xl items-stretch justify-around">
-          {NAV.map((item) => (
-            <NavTab key={item.to} item={item} />
-          ))}
-        </div>
-      </nav>
-
       {!logOpen && (
-        <Button
-          size="icon"
-          aria-label="Log activity"
-          className="fixed right-4 z-50 size-14 rounded-full shadow-lg"
-          style={{
-            bottom: "calc(4.75rem + env(safe-area-inset-bottom, 0px))",
-          }}
-          onClick={() => setLogOpen(true)}
+        <div
+          className="fixed right-4 z-50 flex items-center gap-3"
+          style={{ bottom: FAB_BOTTOM }}
         >
-          <CirclePlusIcon className="size-6" />
-        </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                size="icon"
+                variant="secondary"
+                aria-label="Open navigation menu"
+                className={FAB_CLASS}
+              >
+                <MenuIcon className="size-6" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="end" className="min-w-52 p-2">
+              <DropdownMenuGroup>
+                {NAV.map((item) => (
+                  <NavMenuItem key={item.to} item={item} />
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            size="icon"
+            variant="secondary"
+            aria-label="Log activity"
+            className={FAB_CLASS}
+            onClick={() => setLogOpen(true)}
+          >
+            <CirclePlusIcon className="size-6" />
+          </Button>
+        </div>
       )}
 
       <Drawer open={logOpen} onOpenChange={setLogOpen} direction="bottom">
-        <DrawerContent className="max-h-[88vh]">
-          <DrawerHeader>
-            <DrawerTitle>Log activity</DrawerTitle>
-            <DrawerDescription>
-              Quick-add feeds, sleep, diapers, and pumping for{" "}
-              {baby?.name ?? "Luca"}.
-            </DrawerDescription>
-          </DrawerHeader>
-          <div className="overflow-y-auto px-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
+        <DrawerContent className="flex max-h-[88vh] flex-col bg-background pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
+          <div className="flex min-h-0 flex-1 flex-col">
             <LogPanel onLogged={() => setLogOpen(false)} />
           </div>
         </DrawerContent>
       </Drawer>
-    </div>
+      </div>
+    </ActivityRefreshProvider>
   )
 }

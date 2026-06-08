@@ -128,3 +128,17 @@
     @apply font-sans;
     }
 }
+
+@keyframes ongoing-card-pulse {
+  0%,
+  100% {
+    background-color: var(--card);
+  }
+  50% {
+    background-color: color-mix(in oklch, var(--card) 82%, var(--primary));
+  }
+}
+
+.ongoing-card-pulse {
+  animation: ongoing-card-pulse 2.8s ease-in-out infinite;
+}

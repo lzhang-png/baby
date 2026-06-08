@@ -61,7 +61,6 @@ export function SchedulePage() {
   const { baby } = useAuth()
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
     <div className="flex flex-col gap-8">
       <header className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -175,7 +174,6 @@ export function SchedulePage() {
           ))}
         </div>
       </section>
-    </div>
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { DropletsIcon, MilkIcon, MoonIcon } from "lucide-react"
 import { toast } from "sonner"
 
@@ -6,15 +6,23 @@ import { PumpIcon } from "@/components/icons/pump-icon"
 import { useActivityRefresh } from "@/contexts/activity-refresh-context"
 import { useAuth } from "@/contexts/auth-context"
 import {
+  endNursing,
   endSleep,
+  getActiveNursingSessions,
   getActiveSleep,
   insertDiaper,
   insertFeed,
   insertPump,
   insertSleep,
 } from "@/lib/api/logs"
-import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/format"
+import {
+  formatElapsedClock,
+  fromDateAndTimeValues,
+  toDateInputValue,
+  toTimeInputValue,
+} from "@/lib/format"
 import type { DiaperType, FeedType, NursingSide } from "@/lib/types"
+import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -27,8 +35,6 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
-
 type LogPanelProps = {
   onLogged?: () => void
 }
@@ -37,6 +43,194 @@ const LOG_TAB_CLASS =
   "flex !h-auto min-h-0 flex-1 flex-col items-center gap-1 rounded-none border-0 bg-transparent px-2 py-2 text-[10px] font-medium leading-tight text-muted-foreground shadow-none transition-colors after:hidden hover:text-foreground data-active:bg-transparent data-active:text-primary data-active:shadow-none"
 
 const LOG_SUBMIT_CLASS = "h-10 w-full"
+
+type NursingSideKey = Exclude<NursingSide, "both">
+
+type SideNursingState = {
+  status: "idle" | "running" | "paused"
+  startedAt: string | null
+  accumulatedSec: number
+  lastResumeAt: number | null
+  feedId: string | null
+}
+
+const INITIAL_SIDE_NURSING_STATE: SideNursingState = {
+  status: "idle",
+  startedAt: null,
+  accumulatedSec: 0,
+  lastResumeAt: null,
+  feedId: null,
+}
+
+const INITIAL_NURSING_SIDES: Record<NursingSideKey, SideNursingState> = {
+  L: { ...INITIAL_SIDE_NURSING_STATE },
+  R: { ...INITIAL_SIDE_NURSING_STATE },
+}
+
+function getSideElapsedSec(state: SideNursingState) {
+  if (state.status === "running" && state.lastResumeAt) {
+    return (
+      state.accumulatedSec +
+      Math.floor((Date.now() - state.lastResumeAt) / 1000)
+    )
+  }
+  return state.accumulatedSec
+}
+
+function pauseSideState(state: SideNursingState): SideNursingState {
+  if (state.status !== "running" || !state.lastResumeAt) return state
+  return {
+    ...state,
+    status: "paused",
+    accumulatedSec:
+      state.accumulatedSec +
+      Math.floor((Date.now() - state.lastResumeAt) / 1000),
+    lastResumeAt: null,
+  }
+}
+
+function resumeSideState(state: SideNursingState): SideNursingState {
+  return {
+    ...state,
+    status: "running",
+    lastResumeAt: Date.now(),
+  }
+}
+
+function feedToSideState(feed: {
+  id: string
+  occurred_at: string
+}): SideNursingState {
+  return {
+    status: "running",
+    startedAt: feed.occurred_at,
+    accumulatedSec: 0,
+    lastResumeAt: new Date(feed.occurred_at).getTime(),
+    feedId: feed.id,
+  }
+}
+
+function isSideStarted(state: SideNursingState) {
+  return state.status !== "idle"
+}
+
+function NursingSideRow({
+  label,
+  state,
+  elapsedSec,
+  onStart,
+  onPause,
+  onResume,
+  disabled,
+}: {
+  label: string
+  state: SideNursingState
+  elapsedSec: number
+  onStart: () => void
+  onPause: () => void
+  onResume: () => void
+  disabled?: boolean
+}) {
+  const isRunning = state.status === "running"
+  const isPaused = state.status === "paused"
+
+  return (
+    <div
+      className={cn(
+        "flex items-center justify-between gap-3 rounded-lg border p-3",
+        isRunning && "border-primary bg-primary/10 ring-2 ring-primary/40",
+        isPaused && "border-primary/40 bg-primary/5",
+      )}
+    >
+      <div className="min-w-0">
+        <p className="text-sm font-medium">{label}</p>
+        <p className="font-heading text-2xl font-semibold tabular-nums">
+          {formatElapsedClock(elapsedSec)}
+        </p>
+      </div>
+      {state.status === "idle" ? (
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={onStart}
+          disabled={disabled}
+        >
+          Start
+        </Button>
+      ) : isRunning ? (
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onPause}
+          disabled={disabled}
+        >
+          Pause
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant="secondary"
+          onClick={onResume}
+          disabled={disabled}
+        >
+          Resume
+        </Button>
+      )}
+    </div>
+  )
+}
+
+function LogDateTimeFields({
+  idPrefix,
+  date,
+  time,
+  onDateChange,
+  onTimeChange,
+  dateLabel = "Date",
+  timeLabel = "Time",
+}: {
+  idPrefix: string
+  date: string
+  time: string
+  onDateChange: (value: string) => void
+  onTimeChange: (value: string) => void
+  dateLabel?: string
+  timeLabel?: string
+}) {
+  return (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={`${idPrefix}-date`}>{dateLabel}</Label>
+        <Input
+          id={`${idPrefix}-date`}
+          type="date"
+          value={date}
+          onChange={(e) => onDateChange(e.target.value)}
+        />
+      </div>
+      <div className="flex flex-col gap-2">
+        <Label htmlFor={`${idPrefix}-time`}>{timeLabel}</Label>
+        <Input
+          id={`${idPrefix}-time`}
+          type="time"
+          value={time}
+          onChange={(e) => onTimeChange(e.target.value)}
+        />
+      </div>
+    </div>
+  )
+}
+
+function ElapsedTimer({ elapsedSec }: { elapsedSec: number }) {
+  return (
+    <div className="flex flex-col items-center gap-1 py-2">
+      <p className="text-muted-foreground text-xs font-medium">Elapsed</p>
+      <p className="font-heading text-3xl font-semibold tabular-nums">
+        {formatElapsedClock(elapsedSec)}
+      </p>
+    </div>
+  )
+}
 
 function LogSection({
   title,
@@ -56,14 +250,14 @@ function LogSection({
 export function LogPanel({ onLogged }: LogPanelProps) {
   const { notifyActivityChanged } = useActivityRefresh()
   const { user, baby } = useAuth()
-  const [when, setWhen] = useState(toDatetimeLocalValue())
-  const [notes, setNotes] = useState("")
+  const [logDate, setLogDate] = useState(toDateInputValue)
+  const [logTime, setLogTime] = useState(toTimeInputValue)
   const [submitting, setSubmitting] = useState(false)
 
   const [feedType, setFeedType] = useState<FeedType>("formula")
   const [amountMl, setAmountMl] = useState("90")
-  const [durationMin, setDurationMin] = useState("20")
-  const [side, setSide] = useState<NursingSide>("R")
+  const [nursingSides, setNursingSides] = useState(INITIAL_NURSING_SIDES)
+  const [nursingTick, setNursingTick] = useState(0)
 
   const [diaperType, setDiaperType] = useState<DiaperType>("wet")
 
@@ -72,6 +266,76 @@ export function LogPanel({ onLogged }: LogPanelProps) {
   const [pumpRight, setPumpRight] = useState("15")
 
   const [activeSleepId, setActiveSleepId] = useState<string | null>(null)
+  const [sleepStartedAt, setSleepStartedAt] = useState<string | null>(null)
+  const [sleepElapsedSec, setSleepElapsedSec] = useState(0)
+
+  const isNursingActive =
+    isSideStarted(nursingSides.L) || isSideStarted(nursingSides.R)
+  const isAnyNursingSideRunning =
+    nursingSides.L.status === "running" || nursingSides.R.status === "running"
+
+  useEffect(() => {
+    if (!baby?.id) {
+      setActiveSleepId(null)
+      setSleepStartedAt(null)
+      setNursingSides(INITIAL_NURSING_SIDES)
+      return
+    }
+    let cancelled = false
+    Promise.all([getActiveSleep(baby.id), getActiveNursingSessions(baby.id)]).then(
+      ([activeSleep, activeNursingSessions]) => {
+        if (cancelled) return
+        setActiveSleepId(activeSleep?.id ?? null)
+        setSleepStartedAt(activeSleep?.started_at ?? null)
+
+        const nextSides = { ...INITIAL_NURSING_SIDES }
+        for (const feed of activeNursingSessions) {
+          if (feed.side === "L" || feed.side === "R") {
+            nextSides[feed.side] = feedToSideState(feed)
+          }
+        }
+        setNursingSides(nextSides)
+
+        if (activeNursingSessions.length > 0) {
+          setFeedType("nursing")
+          setLogDate(toDateInputValue())
+          setLogTime(toTimeInputValue())
+        } else if (activeSleep) {
+          setLogDate(toDateInputValue())
+          setLogTime(toTimeInputValue())
+        }
+      },
+    )
+    return () => {
+      cancelled = true
+    }
+  }, [baby?.id])
+
+  useEffect(() => {
+    if (!isAnyNursingSideRunning) return
+    const id = window.setInterval(() => {
+      setNursingTick((tick) => tick + 1)
+    }, 1000)
+    return () => window.clearInterval(id)
+  }, [isAnyNursingSideRunning])
+
+  useEffect(() => {
+    if (!sleepStartedAt) {
+      setSleepElapsedSec(0)
+      return
+    }
+
+    function tick() {
+      const startMs = new Date(sleepStartedAt).getTime()
+      setSleepElapsedSec(
+        Math.max(0, Math.floor((Date.now() - startMs) / 1000)),
+      )
+    }
+
+    tick()
+    const id = window.setInterval(tick, 1000)
+    return () => window.clearInterval(id)
+  }, [sleepStartedAt])
 
   async function ensureBaby() {
     if (!baby || !user) throw new Error("Missing baby or user")
@@ -79,9 +343,14 @@ export function LogPanel({ onLogged }: LogPanelProps) {
   }
 
   function afterSuccess() {
-    setWhen(toDatetimeLocalValue())
+    setLogDate(toDateInputValue())
+    setLogTime(toTimeInputValue())
     notifyActivityChanged()
     onLogged?.()
+  }
+
+  function occurredAt() {
+    return fromDateAndTimeValues(logDate, logTime)
   }
 
   async function handleFeed(e: React.FormEvent) {
@@ -92,18 +361,102 @@ export function LogPanel({ onLogged }: LogPanelProps) {
       await insertFeed({
         babyId,
         userId,
-        occurredAt: fromDatetimeLocalValue(when),
+        occurredAt: occurredAt(),
         feedType,
-        amountMl: feedType !== "nursing" ? Number(amountMl) || undefined : undefined,
-        durationMin: feedType === "nursing" ? Number(durationMin) || undefined : undefined,
-        side: feedType === "nursing" ? side : undefined,
-        notes: notes || undefined,
+        amountMl: Number(amountMl) || undefined,
       })
       toast.success("Feed logged")
-      setNotes("")
       afterSuccess()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to log feed")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  async function startNursingSide(sideKey: NursingSideKey) {
+    setSubmitting(true)
+    try {
+      const { babyId, userId } = await ensureBaby()
+      const startedAt = new Date().toISOString()
+      const log = await insertFeed({
+        babyId,
+        userId,
+        occurredAt: startedAt,
+        feedType: "nursing",
+        side: sideKey,
+      })
+      setNursingSides((prev) => ({
+        ...prev,
+        [sideKey]: {
+          status: "running",
+          startedAt: log.occurred_at,
+          accumulatedSec: 0,
+          lastResumeAt: Date.now(),
+          feedId: log.id,
+        },
+      }))
+      toast.success(`${sideKey === "L" ? "Left" : "Right"} side started`)
+      notifyActivityChanged()
+      onLogged?.()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to start side")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  function pauseNursingSide(sideKey: NursingSideKey) {
+    setNursingSides((prev) => ({
+      ...prev,
+      [sideKey]: pauseSideState(prev[sideKey]),
+    }))
+  }
+
+  function resumeNursingSide(sideKey: NursingSideKey) {
+    setNursingSides((prev) => ({
+      ...prev,
+      [sideKey]: resumeSideState(prev[sideKey]),
+    }))
+  }
+
+  async function handleNursingSaveAll() {
+    setSubmitting(true)
+    try {
+      await ensureBaby()
+      const endedAt = occurredAt()
+      const pausedSides = {
+        L: pauseSideState(nursingSides.L),
+        R: pauseSideState(nursingSides.R),
+      }
+      const startedSides = (["L", "R"] as const).filter((sideKey) =>
+        isSideStarted(pausedSides[sideKey]),
+      )
+      if (startedSides.length === 0) {
+        throw new Error("Start at least one side before saving")
+      }
+
+      await Promise.all(
+        startedSides.map(async (sideKey) => {
+          const state = pausedSides[sideKey]
+          if (!state.feedId) {
+            throw new Error(`Missing feed for ${sideKey} side`)
+          }
+          const durationMin = Math.max(
+            1,
+            Math.round(getSideElapsedSec(state) / 60),
+          )
+          await endNursing(state.feedId, endedAt, undefined, durationMin)
+        }),
+      )
+
+      setNursingSides(INITIAL_NURSING_SIDES)
+      toast.success(
+        startedSides.length === 2 ? "Both sides saved" : "Nursing saved",
+      )
+      afterSuccess()
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to save nursing")
     } finally {
       setSubmitting(false)
     }
@@ -116,12 +469,11 @@ export function LogPanel({ onLogged }: LogPanelProps) {
       const log = await insertSleep({
         babyId,
         userId,
-        startedAt: fromDatetimeLocalValue(when),
-        notes: notes || undefined,
+        startedAt: occurredAt(),
       })
       setActiveSleepId(log.id)
+      setSleepStartedAt(log.started_at)
       toast.success("Sleep started")
-      setNotes("")
       afterSuccess()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to start sleep")
@@ -140,8 +492,9 @@ export function LogPanel({ onLogged }: LogPanelProps) {
         sleepId = active?.id ?? null
       }
       if (!sleepId) throw new Error("No active sleep to end")
-      await endSleep(sleepId, new Date().toISOString())
+      await endSleep(sleepId, occurredAt())
       setActiveSleepId(null)
+      setSleepStartedAt(null)
       toast.success("Sleep ended")
       afterSuccess()
     } catch (err) {
@@ -159,12 +512,10 @@ export function LogPanel({ onLogged }: LogPanelProps) {
       await insertDiaper({
         babyId,
         userId,
-        occurredAt: fromDatetimeLocalValue(when),
+        occurredAt: occurredAt(),
         diaperType,
-        notes: notes || undefined,
       })
       toast.success("Diaper logged")
-      setNotes("")
       afterSuccess()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to log diaper")
@@ -181,14 +532,12 @@ export function LogPanel({ onLogged }: LogPanelProps) {
       await insertPump({
         babyId,
         userId,
-        occurredAt: fromDatetimeLocalValue(when),
+        occurredAt: occurredAt(),
         amountMl: pumpMl ? Number(pumpMl) : undefined,
         durationLeftMin: Number(pumpLeft) || undefined,
         durationRightMin: Number(pumpRight) || undefined,
-        notes: notes || undefined,
       })
       toast.success("Pump logged")
-      setNotes("")
       afterSuccess()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to log pump")
@@ -197,21 +546,82 @@ export function LogPanel({ onLogged }: LogPanelProps) {
     }
   }
 
+  void nursingTick
+
   return (
     <Tabs defaultValue="feed" className="flex min-h-0 flex-1 flex-col gap-0">
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-6">
       <TabsContent value="feed" className="mt-0">
         <LogSection title="Feeding">
-            <form onSubmit={handleFeed} className="flex flex-col gap-4">
+          {feedType === "nursing" ? (
+            <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="feed-when">Time</Label>
-                <Input
-                  id="feed-when"
-                  type="datetime-local"
-                  value={when}
-                  onChange={(e) => setWhen(e.target.value)}
-                />
+                <Label>Type</Label>
+                <Select
+                  value={feedType}
+                  onValueChange={(v) => setFeedType(v as FeedType)}
+                  disabled={isNursingActive}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      <SelectItem value="formula">Formula</SelectItem>
+                      <SelectItem value="expressed">Expressed</SelectItem>
+                      <SelectItem value="nursing">Nursing</SelectItem>
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
               </div>
+              <div className="flex flex-col gap-2">
+                <Label>Sides</Label>
+                <div className="flex flex-col gap-2">
+                  <NursingSideRow
+                    label="Left"
+                    state={nursingSides.L}
+                    elapsedSec={getSideElapsedSec(nursingSides.L)}
+                    onStart={() => startNursingSide("L")}
+                    onPause={() => pauseNursingSide("L")}
+                    onResume={() => resumeNursingSide("L")}
+                    disabled={submitting}
+                  />
+                  <NursingSideRow
+                    label="Right"
+                    state={nursingSides.R}
+                    elapsedSec={getSideElapsedSec(nursingSides.R)}
+                    onStart={() => startNursingSide("R")}
+                    onPause={() => pauseNursingSide("R")}
+                    onResume={() => resumeNursingSide("R")}
+                    disabled={submitting}
+                  />
+                </div>
+              </div>
+              {isNursingActive && (
+                <LogDateTimeFields
+                  idPrefix="feed"
+                  date={logDate}
+                  time={logTime}
+                  onDateChange={setLogDate}
+                  onTimeChange={setLogTime}
+                  dateLabel="End date"
+                  timeLabel="End time"
+                />
+              )}
+              {isNursingActive && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className={LOG_SUBMIT_CLASS}
+                  onClick={handleNursingSaveAll}
+                  disabled={submitting}
+                >
+                  Stop and save
+                </Button>
+              )}
+            </div>
+          ) : (
+            <form onSubmit={handleFeed} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label>Type</Label>
                 <Select
@@ -223,61 +633,28 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="nursing">Nursing</SelectItem>
                       <SelectItem value="formula">Formula</SelectItem>
                       <SelectItem value="expressed">Expressed</SelectItem>
-                      <SelectItem value="donated">Donated milk</SelectItem>
+                      <SelectItem value="nursing">Nursing</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
-              {feedType === "nursing" ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="flex flex-col gap-2">
-                    <Label htmlFor="duration">Duration (min)</Label>
-                    <Input
-                      id="duration"
-                      type="number"
-                      min={1}
-                      value={durationMin}
-                      onChange={(e) => setDurationMin(e.target.value)}
-                    />
-                  </div>
-                  <div className="flex flex-col gap-2">
-                    <Label>Side</Label>
-                    <Select value={side} onValueChange={(v) => setSide(v as NursingSide)}>
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectGroup>
-                          <SelectItem value="L">Left</SelectItem>
-                          <SelectItem value="R">Right</SelectItem>
-                          <SelectItem value="both">Both</SelectItem>
-                        </SelectGroup>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              ) : (
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="amount">Amount (ml)</Label>
-                  <Input
-                    id="amount"
-                    type="number"
-                    min={0}
-                    value={amountMl}
-                    onChange={(e) => setAmountMl(e.target.value)}
-                  />
-                </div>
-              )}
+              <LogDateTimeFields
+                idPrefix="feed"
+                date={logDate}
+                time={logTime}
+                onDateChange={setLogDate}
+                onTimeChange={setLogTime}
+              />
               <div className="flex flex-col gap-2">
-                <Label htmlFor="feed-notes">Notes</Label>
-                <Textarea
-                  id="feed-notes"
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  rows={2}
+                <Label htmlFor="amount">Amount (ml)</Label>
+                <Input
+                  id="amount"
+                  type="number"
+                  min={0}
+                  value={amountMl}
+                  onChange={(e) => setAmountMl(e.target.value)}
                 />
               </div>
               <Button
@@ -289,53 +666,70 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                 Log feed
               </Button>
             </form>
+          )}
         </LogSection>
       </TabsContent>
 
       <TabsContent value="sleep" className="mt-0">
         <LogSection title="Sleep">
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="sleep-when">Start time</Label>
-              <Input
-                id="sleep-when"
-                type="datetime-local"
-                value={when}
-                onChange={(e) => setWhen(e.target.value)}
+            {activeSleepId ? (
+              <>
+                <ElapsedTimer elapsedSec={sleepElapsedSec} />
+                <LogDateTimeFields
+                  idPrefix="sleep"
+                  date={logDate}
+                  time={logTime}
+                  onDateChange={setLogDate}
+                  onTimeChange={setLogTime}
+                  dateLabel="End date"
+                  timeLabel="End time"
+                />
+              </>
+            ) : (
+              <LogDateTimeFields
+                idPrefix="sleep"
+                date={logDate}
+                time={logTime}
+                onDateChange={setLogDate}
+                onTimeChange={setLogTime}
+                dateLabel="Start date"
+                timeLabel="Start time"
               />
-            </div>
-            <div className="flex flex-wrap gap-2">
+            )}
+            {activeSleepId ? (
               <Button
                 type="button"
                 variant="secondary"
+                className={LOG_SUBMIT_CLASS}
+                onClick={handleSleepEnd}
+                disabled={submitting}
+              >
+                End sleep
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="secondary"
+                className={LOG_SUBMIT_CLASS}
                 onClick={handleSleepStart}
                 disabled={submitting}
               >
                 Start sleeping
               </Button>
-              <Button
-                type="button"
-                variant="secondary"
-                onClick={handleSleepEnd}
-                disabled={submitting}
-              >
-                End sleep now
-              </Button>
-            </div>
+            )}
         </LogSection>
       </TabsContent>
 
       <TabsContent value="diaper" className="mt-0">
         <LogSection title="Diaper">
             <form onSubmit={handleDiaper} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="diaper-when">Time</Label>
-                <Input
-                  id="diaper-when"
-                  type="datetime-local"
-                  value={when}
-                  onChange={(e) => setWhen(e.target.value)}
-                />
-              </div>
+              <LogDateTimeFields
+                idPrefix="diaper"
+                date={logDate}
+                time={logTime}
+                onDateChange={setLogDate}
+                onTimeChange={setLogTime}
+              />
               <div className="flex flex-col gap-2">
                 <Label>Type</Label>
                 <Select
@@ -370,15 +764,13 @@ export function LogPanel({ onLogged }: LogPanelProps) {
       <TabsContent value="pump" className="mt-0">
         <LogSection title="Pumping">
             <form onSubmit={handlePump} className="flex flex-col gap-4">
-              <div className="flex flex-col gap-2">
-                <Label htmlFor="pump-when">Time</Label>
-                <Input
-                  id="pump-when"
-                  type="datetime-local"
-                  value={when}
-                  onChange={(e) => setWhen(e.target.value)}
-                />
-              </div>
+              <LogDateTimeFields
+                idPrefix="pump"
+                date={logDate}
+                time={logTime}
+                onDateChange={setLogDate}
+                onTimeChange={setLogTime}
+              />
               <div className="flex flex-col gap-2">
                 <Label htmlFor="pump-ml">Amount (ml, optional)</Label>
                 <Input

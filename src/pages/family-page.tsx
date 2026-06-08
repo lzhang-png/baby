@@ -20,7 +20,6 @@ export function FamilyPage() {
   }
 
   return (
-    <div className="min-h-0 flex-1 overflow-y-auto pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))]">
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
         <h1 className="text-2xl font-semibold tracking-tight">Family</h1>
@@ -71,7 +70,6 @@ export function FamilyPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
     </div>
   )
 }

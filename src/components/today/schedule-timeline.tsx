@@ -11,7 +11,7 @@ const INITIAL_FUTURE_DAYS = 2
 const LOAD_BATCH = 3
 const FAB_BOTTOM = "calc(1rem + env(safe-area-inset-bottom, 0px))"
 const NOW_FAB_CLASS =
-  "fixed left-4 z-[60] h-12 gap-1.5 rounded-full px-4 shadow-lg"
+  "fixed left-4 z-[60] h-12 gap-1.5 rounded-full px-4 text-white shadow-lg hover:text-white [&_svg]:text-white"
 
 type NowScrollOffset = "at" | "past" | "future"
 

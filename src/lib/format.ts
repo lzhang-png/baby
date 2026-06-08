@@ -48,6 +48,15 @@ export function formatDuration(minutes: number | null | undefined) {
   return `${h} hr ${m} min`
 }
 
+export function formatElapsedClock(totalSec: number) {
+  const h = Math.floor(totalSec / 3600)
+  const m = Math.floor((totalSec % 3600) / 60)
+  const s = totalSec % 60
+  const pad = (n: number) => String(n).padStart(2, "0")
+  if (h > 0) return `${h}:${pad(m)}:${pad(s)}`
+  return `${pad(m)}:${pad(s)}`
+}
+
 export function formatCompactDuration(minutes: number) {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
@@ -56,9 +65,22 @@ export function formatCompactDuration(minutes: number) {
   return `${h}h ${m}m`
 }
 
+const padDatePart = (n: number) => String(n).padStart(2, "0")
+
+export function toDateInputValue(date = new Date()) {
+  return `${date.getFullYear()}-${padDatePart(date.getMonth() + 1)}-${padDatePart(date.getDate())}`
+}
+
+export function toTimeInputValue(date = new Date()) {
+  return `${padDatePart(date.getHours())}:${padDatePart(date.getMinutes())}`
+}
+
 export function toDatetimeLocalValue(date = new Date()) {
-  const pad = (n: number) => String(n).padStart(2, "0")
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  return `${toDateInputValue(date)}T${toTimeInputValue(date)}`
+}
+
+export function fromDateAndTimeValues(date: string, time: string) {
+  return new Date(`${date}T${time}`).toISOString()
 }
 
 export function fromDatetimeLocalValue(value: string) {

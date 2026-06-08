@@ -371,3 +371,48 @@ export async function getActiveSleep(babyId: string): Promise<SleepLog | null> {
   if (error) throw error
   return data as SleepLog | null
 }
+
+export async function getActiveNursingSessions(
+  babyId: string,
+): Promise<FeedLog[]> {
+  const { data, error } = await supabase
+    .from("feed_logs")
+    .select("*")
+    .eq("baby_id", babyId)
+    .eq("feed_type", "nursing")
+    .is("duration_min", null)
+    .order("occurred_at", { ascending: false })
+
+  if (error) throw error
+  return (data ?? []) as FeedLog[]
+}
+
+export async function endNursing(
+  feedId: string,
+  endedAt: string,
+  notes?: string,
+  durationMin?: number,
+) {
+  const { data: feed, error: fetchError } = await supabase
+    .from("feed_logs")
+    .select("*")
+    .eq("id", feedId)
+    .single()
+
+  if (fetchError) throw fetchError
+
+  const startMs = new Date(feed.occurred_at).getTime()
+  const endMs = new Date(endedAt).getTime()
+  const resolvedDuration =
+    durationMin ??
+    Math.max(1, Math.round((endMs - startMs) / 60_000))
+
+  return updateFeed(feedId, {
+    occurredAt: feed.occurred_at,
+    feedType: "nursing",
+    side: feed.side,
+    notes: notes ?? feed.notes,
+    durationMin: resolvedDuration,
+    amountMl: null,
+  })
+}

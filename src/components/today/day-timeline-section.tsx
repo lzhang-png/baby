@@ -7,12 +7,16 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
+import { getOngoingTimelineCards } from "@/components/log/activity-label"
 import { DayActivitySummary } from "@/components/today/day-activity-summary"
 import {
+  CONNECTOR_TRUNK_OFFSET_PX,
   LOG_CARD_ESTIMATED_HEIGHT_PX,
   LOG_CARD_LEFT_OFFSET_PX,
+  OngoingNowCards,
   RecordedEventConnectors,
   RecordedEvents,
+  TIMELINE_MUTED_LINE_CLASS,
   type PlacedActivity,
 } from "@/components/today/recorded-events"
 import { useActivityRefresh } from "@/contexts/activity-refresh-context"
@@ -49,6 +53,7 @@ const CHECKPOINT_ICONS: Record<CheckpointIconKind, LucideIcon> = {
 const SCHEDULE_PANEL_WIDTH = "38%"
 const LOGS_PANEL_WIDTH = "62%"
 const SCHEDULE_PANEL_RATIO = 0.38
+const NOW_LINE_START_OFFSET_PX = 64 // px-1 + w-14 timestamp clearance
 
 const SCHEDULE_GRID =
   "grid-cols-[minmax(0,1fr)_1.25rem] gap-x-2"
@@ -134,7 +139,9 @@ function ProgressDot({ state }: { state: "past" | "current" | "future" }) {
       aria-hidden
       className={cn(
         "relative z-30 inline-block shrink-0 rounded-full transition-all duration-500",
-        state === "future" ? "size-2 bg-muted-foreground" : "size-3 bg-primary",
+        state === "future"
+          ? "size-2 border border-black bg-muted-foreground"
+          : "size-3 border border-black bg-primary",
       )}
     />
   )
@@ -174,7 +181,8 @@ export function DayTimelineSection({
   }, [date, registerDayStartRef])
   const [connectorMetrics, setConnectorMetrics] = useState({
     barX: 0,
-    connectorX: 0,
+    trunkX: 0,
+    cardLeftX: 0,
   })
 
   const isToday = isSameDay(date, now)
@@ -219,29 +227,50 @@ export function DayTimelineSection({
     return layout.getProgressPx(nowLayoutMin)
   }, [isToday, layout, nowLayoutMin])
 
-  const recordedEvents = useMemo((): PlacedActivity[] => {
-    const timelineEvents = expandActivitiesForTimeline(activities, date, now)
+  const { recordedEvents, ongoingTimelineCards, ongoingCardLabelYs } =
+    useMemo(() => {
+      const timelineEvents = expandActivitiesForTimeline(activities, date)
 
-    const placed = timelineEvents.map((event) => ({
-      item: event.item,
-      id: event.id,
-      displayAt: event.at,
-      sleepPhase: event.sleepPhase,
-      anchorY: getActivityPositionPx(event.at, items, layout),
-      labelY: 0,
-    }))
+      const placed = timelineEvents.map((event) => ({
+        item: event.item,
+        id: event.id,
+        displayAt: event.at,
+        sleepPhase: event.sleepPhase,
+        anchorY: getActivityPositionPx(event.at, items, layout),
+        labelY: 0,
+      }))
 
-    const labelYs = spreadLabelPositions(
-      placed.map((event) => event.anchorY),
-      DEFAULT_RECORDED_LABEL_EDGE_GAP_PX,
-      LOG_CARD_ESTIMATED_HEIGHT_PX,
-    )
+      const ongoing = isToday
+        ? getOngoingTimelineCards(activities, date, now)
+        : []
+      const nowAnchorY = isToday
+        ? layout.getProgressPx(getNowLayoutMinutes(now))
+        : null
 
-    return placed.map((event, index) => ({
-      ...event,
-      labelY: labelYs[index],
-    }))
-  }, [activities, date, now, items, layout])
+      const preferredYs = [
+        ...placed.map((event) => event.anchorY),
+        ...(nowAnchorY != null
+          ? ongoing.map(() => nowAnchorY)
+          : []),
+      ]
+
+      const labelYs = spreadLabelPositions(
+        preferredYs,
+        DEFAULT_RECORDED_LABEL_EDGE_GAP_PX,
+        LOG_CARD_ESTIMATED_HEIGHT_PX,
+      )
+
+      return {
+        recordedEvents: placed.map((event, index) => ({
+          ...event,
+          labelY: labelYs[index],
+        })),
+        ongoingTimelineCards: ongoing,
+        ongoingCardLabelYs: ongoing.map(
+          (_, index) => labelYs[placed.length + index],
+        ),
+      }
+    }, [activities, date, isToday, now, items, layout])
 
   useEffect(() => {
     function measure() {
@@ -251,17 +280,18 @@ export function DayTimelineSection({
 
       const rootRect = root.getBoundingClientRect()
       const barRect = bar.getBoundingClientRect()
+      const logsPanelLeft = rootRect.width * SCHEDULE_PANEL_RATIO
       setConnectorMetrics({
         barX: barRect.left + barRect.width / 2 - rootRect.left,
-        connectorX:
-          rootRect.width * SCHEDULE_PANEL_RATIO + LOG_CARD_LEFT_OFFSET_PX,
+        trunkX: logsPanelLeft + CONNECTOR_TRUNK_OFFSET_PX,
+        cardLeftX: logsPanelLeft + LOG_CARD_LEFT_OFFSET_PX,
       })
     }
 
     measure()
     window.addEventListener("resize", measure)
     return () => window.removeEventListener("resize", measure)
-  }, [layout.height, recordedEvents.length])
+  }, [layout.height, recordedEvents.length, ongoingTimelineCards.length])
 
   const dayHeaderDotState = isFutureDay ? "future" : "past"
 
@@ -274,8 +304,14 @@ export function DayTimelineSection({
       >
         <RecordedEventConnectors
           events={recordedEvents}
+          ongoingConnectors={ongoingTimelineCards.map((card, index) => ({
+            id: card.id,
+            labelY: ongoingCardLabelYs[index],
+          }))}
+          nowAnchorY={nowPositionY}
           barX={connectorMetrics.barX}
-          connectorX={connectorMetrics.connectorX}
+          trunkX={connectorMetrics.trunkX}
+          cardLeftX={connectorMetrics.cardLeftX}
         />
 
         <div
@@ -289,10 +325,10 @@ export function DayTimelineSection({
           <div className="flex h-full justify-center">
             <div
               ref={barRef}
-              className="bg-muted relative z-0 h-full w-[2px]"
+              className={cn(TIMELINE_MUTED_LINE_CLASS, "relative z-0 h-full w-px")}
             >
               <div
-                className="bg-primary absolute top-0 left-1/2 w-px -translate-x-1/2 transition-[height] duration-500 ease-out"
+                className="bg-primary absolute top-0 w-full transition-[height] duration-500 ease-out"
                 style={{ height: `${progressPercent}%` }}
               />
             </div>
@@ -301,11 +337,20 @@ export function DayTimelineSection({
 
         {nowPositionY !== null && (
           <div
-            className="pointer-events-none absolute inset-x-0 z-0 flex -translate-y-1/2 items-center gap-2 px-1"
+            className="pointer-events-none absolute left-0 z-0 flex -translate-y-1/2 items-center px-1"
             style={{ top: nowPositionY }}
           >
             <div className="w-14 shrink-0" aria-hidden />
-            <div aria-hidden className="bg-muted h-px min-w-0 flex-1" />
+            <div
+              aria-hidden
+              className={cn(TIMELINE_MUTED_LINE_CLASS, "h-px shrink-0")}
+              style={{
+                width: Math.max(
+                  0,
+                  connectorMetrics.barX - NOW_LINE_START_OFFSET_PX,
+                ),
+              }}
+            />
           </div>
         )}
 
@@ -382,7 +427,7 @@ export function DayTimelineSection({
                   />
                   <p
                     className={cn(
-                      "text-sm leading-snug",
+                      "text-xs leading-snug",
                       checkpointTone(state),
                     )}
                   >
@@ -411,7 +456,7 @@ export function DayTimelineSection({
               <div className="relative flex items-center justify-center">
                 <span
                   aria-hidden
-                  className="bg-primary border-primary relative z-[1] inline-block size-3.5 shrink-0 rounded-full border-2 ring-4 ring-primary/40"
+                  className="relative z-[1] inline-block size-3 shrink-0 rounded-full border border-black bg-blue-500"
                 />
               </div>
             </div>
@@ -423,7 +468,7 @@ export function DayTimelineSection({
             >
               <time
                 dateTime={now.toISOString()}
-                className="bg-secondary text-secondary-foreground inline-block rounded-md px-1.5 py-0.5 text-xs font-semibold tabular-nums"
+                className="inline-block rounded-md bg-blue-500 px-1.5 py-0.5 text-xs font-semibold text-white tabular-nums"
               >
                 {nowLabel}
               </time>
@@ -441,6 +486,11 @@ export function DayTimelineSection({
             style={{ top: layout.midnightY }}
           />
           <RecordedEvents events={recordedEvents} loading={loading} now={now} />
+          <OngoingNowCards
+            cards={ongoingTimelineCards}
+            labelYs={ongoingCardLabelYs}
+            now={now}
+          />
         </div>
       </div>
     </section>

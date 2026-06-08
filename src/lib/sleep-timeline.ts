@@ -26,9 +26,7 @@ export function getSleepDurationMinutes(sleep: SleepLog, now: Date): number {
 export function expandActivitiesForTimeline(
   activities: ActivityItem[],
   date: Date,
-  now: Date,
 ): TimelineActivityEvent[] {
-  const isToday = isSameDay(date, now)
   const events: TimelineActivityEvent[] = []
 
   for (const item of activities) {
@@ -50,20 +48,11 @@ export function expandActivitiesForTimeline(
       sleepPhase: "start",
     })
 
-    if (sleep.ended_at) {
-      if (isSameDay(new Date(sleep.ended_at), date)) {
-        events.push({
-          item,
-          id: `sleep-${sleep.id}-end`,
-          at: sleep.ended_at,
-          sleepPhase: "end",
-        })
-      }
-    } else if (isToday) {
+    if (sleep.ended_at && isSameDay(new Date(sleep.ended_at), date)) {
       events.push({
         item,
         id: `sleep-${sleep.id}-end`,
-        at: now.toISOString(),
+        at: sleep.ended_at,
         sleepPhase: "end",
       })
     }

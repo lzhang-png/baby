@@ -69,12 +69,20 @@ function NavMenuItem({ item }: { item: NavItem }) {
 
 export function AppShell() {
   const [logOpen, setLogOpen] = useState(false)
+  const { pathname } = useLocation()
+  const isTimelinePage = isNavItemActive(pathname, "/today")
 
   return (
     <ActivityRefreshProvider>
       <div className="bg-background flex h-svh flex-col overflow-hidden">
       <main className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col">
-        <Outlet />
+        {isTimelinePage ? (
+          <Outlet />
+        ) : (
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-6 pb-[calc(5.5rem+env(safe-area-inset-bottom,0px))] sm:px-5">
+            <Outlet />
+          </div>
+        )}
       </main>
 
       {!logOpen && (
@@ -104,9 +112,11 @@ export function AppShell() {
 
           <Button
             size="icon"
-            variant="secondary"
             aria-label="Log activity"
-            className={FAB_CLASS}
+            className={cn(
+              FAB_CLASS,
+              "bg-blue-500 text-white hover:bg-blue-600",
+            )}
             onClick={() => setLogOpen(true)}
           >
             <CirclePlusIcon className="size-6" />

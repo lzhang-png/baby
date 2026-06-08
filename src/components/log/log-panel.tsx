@@ -151,35 +151,6 @@ export function LogPanel({ onLogged }: LogPanelProps) {
     }
   }
 
-  async function handleSleepComplete(e: React.FormEvent) {
-    e.preventDefault()
-    setSubmitting(true)
-    try {
-      const { babyId, userId } = await ensureBaby()
-      const start = fromDatetimeLocalValue(when)
-      const end = new Date().toISOString()
-      const duration = Math.max(
-        1,
-        Math.round((new Date(end).getTime() - new Date(start).getTime()) / 60000),
-      )
-      await insertSleep({
-        babyId,
-        userId,
-        startedAt: start,
-        endedAt: end,
-        durationMin: duration,
-        notes: notes || undefined,
-      })
-      toast.success("Sleep logged")
-      setNotes("")
-      afterSuccess()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to log sleep")
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   async function handleDiaper(e: React.FormEvent) {
     e.preventDefault()
     setSubmitting(true)
@@ -350,17 +321,6 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                 End sleep now
               </Button>
             </div>
-            <form
-              onSubmit={handleSleepComplete}
-              className="flex flex-col gap-4 border-t pt-4"
-            >
-              <p className="text-muted-foreground text-sm">
-                Or log a completed nap in one step (uses start time above → now).
-              </p>
-              <Button type="submit" variant="outline" disabled={submitting}>
-                Log completed sleep
-              </Button>
-            </form>
         </LogSection>
       </TabsContent>
 

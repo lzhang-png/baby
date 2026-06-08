@@ -4,11 +4,11 @@ import { useAuth } from "@/contexts/auth-context"
 import { SetupHouseholdPage } from "@/pages/setup-household-page"
 
 export function HouseholdGate() {
-  const { household, loading } = useAuth()
+  const { household, loading, householdLoading } = useAuth()
 
-  if (loading) {
+  if (loading || householdLoading) {
     return (
-      <div className="flex min-h-[40vh] items-center justify-center">
+      <div className="bg-background flex min-h-svh items-center justify-center">
         <p className="text-muted-foreground text-sm">Loading…</p>
       </div>
     )

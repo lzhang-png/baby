@@ -26,7 +26,15 @@ export function SignupPage() {
   const [inviteCode, setInviteCode] = useState("")
   const [submitting, setSubmitting] = useState(false)
 
-  if (!loading && user) {
+  if (loading) {
+    return (
+      <div className="bg-background flex min-h-svh items-center justify-center">
+        <p className="text-muted-foreground text-sm">Loading…</p>
+      </div>
+    )
+  }
+
+  if (user) {
     return <Navigate to="/today" replace />
   }
 

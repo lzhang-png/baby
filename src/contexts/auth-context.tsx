@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from "react"
@@ -19,6 +20,7 @@ type AuthContextValue = {
   household: Household | null
   baby: Baby | null
   loading: boolean
+  householdLoading: boolean
   signIn: (email: string, password: string) => Promise<void>
   signUp: (
     email: string,
@@ -43,6 +45,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [household, setHousehold] = useState<Household | null>(null)
   const [baby, setBaby] = useState<Baby | null>(null)
   const [loading, setLoading] = useState(true)
+  const [householdLoading, setHouseholdLoading] = useState(false)
+  const initialized = useRef(false)
 
   const refreshHousehold = useCallback(async () => {
     if (!session) {
@@ -61,6 +65,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return
     }
 
+    let mounted = true
+
+    async function bootstrap() {
+      const {
+        data: { session: initialSession },
+      } = await supabase.auth.getSession()
+      if (!mounted) return
+
+      setSession(initialSession)
+      setUser(initialSession?.user ?? null)
+
+      if (initialSession) {
+        setHouseholdLoading(true)
+        try {
+          const result = await loadHouseholdData()
+          if (!mounted) return
+          setHousehold(result.household)
+          setBaby(result.baby)
+        } catch {
+          if (!mounted) return
+          setHousehold(null)
+          setBaby(null)
+        } finally {
+          if (mounted) setHouseholdLoading(false)
+        }
+      }
+
+      initialized.current = true
+      if (mounted) setLoading(false)
+    }
+
+    void bootstrap()
+
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange((_event, nextSession) => {
@@ -68,20 +105,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       // deadlock token refresh and surface as unexpected logouts.
       setSession(nextSession)
       setUser(nextSession?.user ?? null)
-      setLoading(false)
     })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   useEffect(() => {
+    if (!initialized.current) return
+
     if (!session) {
       setHousehold(null)
       setBaby(null)
+      setHouseholdLoading(false)
       return
     }
 
     let cancelled = false
+    setHouseholdLoading(true)
 
     loadHouseholdData()
       .then((result) => {
@@ -93,6 +136,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (cancelled) return
         setHousehold(null)
         setBaby(null)
+      })
+      .finally(() => {
+        if (!cancelled) setHouseholdLoading(false)
       })
 
     return () => {
@@ -148,6 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       household,
       baby,
       loading,
+      householdLoading,
       signIn,
       signUp,
       signOut,
@@ -159,6 +206,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       household,
       baby,
       loading,
+      householdLoading,
       signIn,
       signUp,
       signOut,

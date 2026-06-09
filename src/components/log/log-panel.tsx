@@ -325,8 +325,10 @@ export function LogPanel({ onLogged }: LogPanelProps) {
       return
     }
 
+    const startedAt = sleepStartedAt
+
     function tick() {
-      const startMs = new Date(sleepStartedAt).getTime()
+      const startMs = new Date(startedAt).getTime()
       setSleepElapsedSec(
         Math.max(0, Math.floor((Date.now() - startMs) / 1000)),
       )

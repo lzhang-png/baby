@@ -17,7 +17,6 @@ import {
   RecordedEventConnectors,
   RecordedEvents,
   TIMELINE_MUTED_LINE_CLASS,
-  type PlacedActivity,
 } from "@/components/today/recorded-events"
 import { useActivityRefresh } from "@/contexts/activity-refresh-context"
 import { getActivitiesForDay } from "@/lib/api/logs"

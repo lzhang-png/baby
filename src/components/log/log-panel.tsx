@@ -258,7 +258,7 @@ function LogSection({
 
 export function LogPanel({ onLogged }: LogPanelProps) {
   const { t } = useTranslation()
-  const { notifyActivityChanged } = useActivityRefresh()
+  const { version, notifyActivityChanged } = useActivityRefresh()
   const { user, baby } = useAuth()
   const [logDate, setLogDate] = useState(toDateInputValue)
   const [logTime, setLogTime] = useState(toTimeInputValue)
@@ -319,7 +319,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
     return () => {
       cancelled = true
     }
-  }, [baby?.id])
+  }, [baby?.id, version])
 
   useEffect(() => {
     if (!isAnyNursingSideRunning) return

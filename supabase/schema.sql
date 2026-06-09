@@ -315,6 +315,14 @@ create policy "Members delete pumps"
   on public.pump_logs for delete using (public.user_has_baby_access(baby_id));
 
 -- ---------------------------------------------------------------------------
+-- Realtime: push log changes to all household devices
+-- ---------------------------------------------------------------------------
+alter publication supabase_realtime add table public.feed_logs;
+alter publication supabase_realtime add table public.sleep_logs;
+alter publication supabase_realtime add table public.diaper_logs;
+alter publication supabase_realtime add table public.pump_logs;
+
+-- ---------------------------------------------------------------------------
 -- Grants for RPC
 -- ---------------------------------------------------------------------------
 grant usage on schema public to authenticated;

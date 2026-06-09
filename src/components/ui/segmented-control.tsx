@@ -1,8 +1,12 @@
+import type { ComponentType } from "react"
+
 import { cn } from "@/lib/utils"
 
 type SegmentedControlOption<T extends string> = {
   value: T
   label: string
+  icon?: ComponentType<{ className?: string; "aria-hidden"?: boolean }>
+  iconClassName?: string
 }
 
 type SegmentedControlProps<T extends string> = {
@@ -45,6 +49,7 @@ export function SegmentedControl<T extends string>({
       />
       {options.map((option) => {
         const selected = option.value === value
+        const Icon = option.icon
         return (
           <button
             key={option.value}
@@ -53,7 +58,7 @@ export function SegmentedControl<T extends string>({
             aria-checked={selected}
             disabled={disabled}
             className={cn(
-              "relative z-10 rounded-md text-sm font-medium transition-colors outline-none select-none",
+              "relative z-10 flex min-w-0 items-center justify-center gap-1.5 rounded-md px-1 text-sm font-medium transition-colors outline-none select-none",
               "focus-visible:ring-2 focus-visible:ring-ring/50",
               selected
                 ? "text-foreground"
@@ -62,7 +67,13 @@ export function SegmentedControl<T extends string>({
             )}
             onClick={() => onValueChange(option.value)}
           >
-            {option.label}
+            {Icon && (
+              <Icon
+                aria-hidden
+                className={cn("size-4 shrink-0", option.iconClassName)}
+              />
+            )}
+            <span className="truncate">{option.label}</span>
           </button>
         )
       })}

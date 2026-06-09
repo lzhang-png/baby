@@ -15,6 +15,8 @@ import { toast } from "sonner"
 
 import { PumpIcon } from "@/components/icons/pump-icon"
 import { DiaperIcon } from "@/components/icons/diaper-icon"
+import { MotherIcon } from "@/components/icons/mother-icon"
+import { BabyBottleIcon } from "@/components/icons/baby-bottle-icon"
 import { EditLogDrawer } from "@/components/log/edit-log-drawer"
 import {
   activitySummary,
@@ -56,6 +58,10 @@ export function getRecordedIcon(
 ): LucideIcon {
   if (item.kind === "sleep" && sleepPhase === "end") return SunIcon
   if (item.kind === "diaper") return DIAPER_TYPE_ICONS[item.data.diaper_type]
+  if (item.kind === "feed" && item.data.feed_type === "nursing")
+    return MotherIcon
+  if (item.kind === "feed" && item.data.feed_type === "expressed")
+    return BabyBottleIcon
   return RECORDED_ICONS[item.kind]
 }
 

@@ -457,7 +457,7 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
 
       <div
         ref={setScrollNode}
-        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-[2px]"
+        className="min-h-0 flex-1 touch-pan-y overflow-x-hidden overflow-y-auto px-[2px]"
       >
         <div ref={topSentinelRef} className="h-px shrink-0" aria-hidden />
 

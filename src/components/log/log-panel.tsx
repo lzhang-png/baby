@@ -1,7 +1,16 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
+import {
+  BlendIcon,
+  DropletOffIcon,
+  DropletsIcon,
+  MilkIcon,
+  ToiletIcon,
+} from "lucide-react"
 import { toast } from "sonner"
 
+import { BabyBottleIcon } from "@/components/icons/baby-bottle-icon"
+import { MotherIcon } from "@/components/icons/mother-icon"
 import { useActivityRefresh } from "@/contexts/activity-refresh-context"
 import { useAuth } from "@/contexts/auth-context"
 import {
@@ -576,9 +585,24 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
                   onValueChange={setFeedType}
                   disabled={isNursingActive}
                   options={[
-                    { value: "formula", label: t("log.formula") },
-                    { value: "expressed", label: t("log.expressed") },
-                    { value: "nursing", label: t("log.nursing") },
+                    {
+                      value: "formula",
+                      label: t("log.formula"),
+                      icon: MilkIcon,
+                      iconClassName: "text-sky-400",
+                    },
+                    {
+                      value: "expressed",
+                      label: t("log.expressed"),
+                      icon: BabyBottleIcon,
+                      iconClassName: "text-sky-400",
+                    },
+                    {
+                      value: "nursing",
+                      label: t("log.nursing"),
+                      icon: MotherIcon,
+                      iconClassName: "text-sky-400",
+                    },
                   ]}
                 />
               </div>
@@ -636,9 +660,24 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
                   value={feedType}
                   onValueChange={setFeedType}
                   options={[
-                    { value: "formula", label: t("log.formula") },
-                    { value: "expressed", label: t("log.expressed") },
-                    { value: "nursing", label: t("log.nursing") },
+                    {
+                      value: "formula",
+                      label: t("log.formula"),
+                      icon: MilkIcon,
+                      iconClassName: "text-sky-400",
+                    },
+                    {
+                      value: "expressed",
+                      label: t("log.expressed"),
+                      icon: BabyBottleIcon,
+                      iconClassName: "text-sky-400",
+                    },
+                    {
+                      value: "nursing",
+                      label: t("log.nursing"),
+                      icon: MotherIcon,
+                      iconClassName: "text-sky-400",
+                    },
                   ]}
                 />
               </div>
@@ -731,10 +770,30 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
                   value={diaperType}
                   onValueChange={setDiaperType}
                   options={[
-                    { value: "wet", label: t("log.wet") },
-                    { value: "dirty", label: t("log.dirty") },
-                    { value: "mixed", label: t("log.mixed") },
-                    { value: "dry", label: t("log.dry") },
+                    {
+                      value: "wet",
+                      label: t("log.wet"),
+                      icon: DropletsIcon,
+                      iconClassName: "text-amber-700",
+                    },
+                    {
+                      value: "dirty",
+                      label: t("log.dirty"),
+                      icon: ToiletIcon,
+                      iconClassName: "text-amber-700",
+                    },
+                    {
+                      value: "mixed",
+                      label: t("log.mixed"),
+                      icon: BlendIcon,
+                      iconClassName: "text-amber-700",
+                    },
+                    {
+                      value: "dry",
+                      label: t("log.dry"),
+                      icon: DropletOffIcon,
+                      iconClassName: "text-amber-700",
+                    },
                   ]}
                 />
               </div>

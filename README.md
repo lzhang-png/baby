@@ -53,12 +53,22 @@ For GitHub Pages deploy, add the same values as repository **Secrets** → Actio
 
 ## Local development
 
+Requires **Node.js 20+**.
+
 ```bash
 npm install
 npm run dev
 ```
 
-Open http://localhost:5173/
+Open the exact URL Vite prints, usually **http://localhost:5173/**
+
+If you see a blank page:
+
+1. Confirm `npm install` finished without errors
+2. Confirm `npm run dev` is still running in the terminal
+3. Hard refresh the browser (`Cmd+Shift+R` on Mac)
+4. Open the app in Chrome or Safari (not an embedded IDE preview)
+5. If an error panel appears, follow its steps or check the browser console (`F12`)
 
 ## First account vs family members
 

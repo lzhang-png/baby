@@ -2,11 +2,12 @@ import {
   clampPxPerMinute,
   DEFAULT_PX_PER_MINUTE,
 } from "@/lib/schedule-utils"
+import { safeGetItem, safeSetItem } from "@/lib/safe-storage"
 
 const STORAGE_KEY = "baby-timeline-zoom"
 
 export function loadTimelineZoom(): number {
-  const stored = localStorage.getItem(STORAGE_KEY)
+  const stored = safeGetItem(STORAGE_KEY)
   if (!stored) return DEFAULT_PX_PER_MINUTE
   const parsed = Number(stored)
   return Number.isFinite(parsed)
@@ -15,7 +16,7 @@ export function loadTimelineZoom(): number {
 }
 
 export function saveTimelineZoom(pxPerMinute: number) {
-  localStorage.setItem(STORAGE_KEY, String(pxPerMinute))
+  safeSetItem(STORAGE_KEY, String(pxPerMinute))
 }
 
 export const ZOOM_ANIMATION_MS = 300

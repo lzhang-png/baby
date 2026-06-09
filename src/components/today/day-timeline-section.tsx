@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react"
 import { useTranslation } from "react-i18next"
 import {
   BathIcon,
@@ -10,6 +17,7 @@ import {
 
 import { getOngoingTimelineCards } from "@/components/log/activity-label"
 import { DayActivitySummary } from "@/components/today/day-activity-summary"
+import { buildDayActivitySummary } from "@/lib/day-activity-summary"
 import {
   CONNECTOR_TRUNK_OFFSET_PX,
   LOG_CARD_ESTIMATED_HEIGHT_PX,
@@ -58,6 +66,62 @@ const NOW_LINE_START_OFFSET_PX = 64 // px-1 + w-14 timestamp clearance
 
 const SCHEDULE_GRID =
   "grid-cols-[minmax(0,1fr)_1.25rem] gap-x-2"
+
+const DAY_SUMMARY_FIRST_LINE_HEIGHT_PX = 32
+const DAY_SUMMARY_VERTICAL_OFFSET_PX = 6
+const DAY_SUMMARY_BOTTOM_PADDING_PX = 12
+const DAY_SUMMARY_CARD_GAP_PX = 8
+
+function getDaySummaryFirstLineHalfHeight(): number {
+  return getScaledPx(DAY_SUMMARY_FIRST_LINE_HEIGHT_PX) / 2
+}
+
+function getDaySummaryVerticalOffset(): number {
+  return getScaledPx(DAY_SUMMARY_VERTICAL_OFFSET_PX)
+}
+
+function getEstimatedDaySummaryBandHeight(activities: ActivityItem[]): number {
+  const segments = buildDayActivitySummary(activities)
+  if (!segments?.length) return 0
+
+  const rowHeight = getScaledPx(DAY_SUMMARY_FIRST_LINE_HEIGHT_PX)
+  const rowGap = getScaledPx(4)
+  const rows = Math.ceil(segments.length / 3)
+  const contentHeight = rows * rowHeight + Math.max(0, rows - 1) * rowGap
+
+  return contentHeight + getScaledPx(DAY_SUMMARY_BOTTOM_PADDING_PX)
+}
+
+function getEstimatedDaySummaryBottom(
+  activities: ActivityItem[],
+  anchorY: number,
+): number {
+  const bandHeight = getEstimatedDaySummaryBandHeight(activities)
+  if (bandHeight <= 0) return 0
+
+  return (
+    anchorY -
+    getDaySummaryFirstLineHalfHeight() +
+    getDaySummaryVerticalOffset() +
+    bandHeight
+  )
+}
+
+function getDaySummaryMinLabelY(summaryBottom: number): number {
+  if (summaryBottom <= 0) return 0
+
+  const cardHalf = getScaledLogCardHeightPx(LOG_CARD_ESTIMATED_HEIGHT_PX) / 2
+  const gap = getScaledPx(DAY_SUMMARY_CARD_GAP_PX)
+
+  return summaryBottom + gap + cardHalf
+}
+
+function getDaySummaryMaxLabelY(layoutHeight: number): number {
+  const cardHalf = getScaledLogCardHeightPx(LOG_CARD_ESTIMATED_HEIGHT_PX) / 2
+  const gap = getScaledPx(DAY_SUMMARY_CARD_GAP_PX)
+
+  return layoutHeight - gap - cardHalf
+}
 
 const ICON_COLORS: Record<CheckpointIconKind, string> = {
   wake: "text-amber-400",
@@ -169,6 +233,7 @@ export function DayTimelineSection({
   const { version } = useActivityRefresh()
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [logsVisible, setLogsVisible] = useState(false)
 
   const stage = useMemo(
     () => getCurrentStage(date),
@@ -182,6 +247,7 @@ export function DayTimelineSection({
 
   const timelineRef = useRef<HTMLDivElement>(null)
   const dayStartRef = useRef<HTMLDivElement>(null)
+  const summaryRef = useRef<HTMLDivElement>(null)
   const barRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -231,6 +297,22 @@ export function DayTimelineSection({
     void load({ silent: true })
   }, [version]) // eslint-disable-line react-hooks/exhaustive-deps -- refresh only on log changes
 
+  useEffect(() => {
+    if (loading) {
+      setLogsVisible(false)
+      return
+    }
+
+    setLogsVisible(false)
+    const id = requestAnimationFrame(() => setLogsVisible(true))
+    return () => cancelAnimationFrame(id)
+  }, [loading])
+
+  const logsFadeClass = cn(
+    "transition-opacity duration-150 ease-out",
+    logsVisible ? "opacity-100" : "opacity-0",
+  )
+
   const nowLayoutMin = isToday ? getNowLayoutMinutes(now) : 0
 
   const progressPercent = isPastDay
@@ -248,6 +330,51 @@ export function DayTimelineSection({
     if (!isToday) return null
     return layout.getProgressPx(nowLayoutMin)
   }, [isToday, layout, nowLayoutMin])
+
+  const daySummaryFirstLineHalfHeight = getDaySummaryFirstLineHalfHeight()
+  const daySummaryVerticalOffset = getDaySummaryVerticalOffset()
+
+  const estimatedDaySummaryBottom = useMemo(
+    () => getEstimatedDaySummaryBottom(activities, layout.midnightY),
+    [activities, layout.midnightY, textSizeVersion, i18n.language],
+  )
+
+  const [measuredDaySummaryBottom, setMeasuredDaySummaryBottom] = useState(0)
+
+  useLayoutEffect(() => {
+    function measure() {
+      const root = timelineRef.current
+      const summary = summaryRef.current
+      if (!root || !summary || summary.childElementCount === 0) {
+        setMeasuredDaySummaryBottom(0)
+        return
+      }
+
+      setMeasuredDaySummaryBottom(
+        summary.getBoundingClientRect().bottom -
+          root.getBoundingClientRect().top,
+      )
+    }
+
+    measure()
+    const summaryEl = summaryRef.current
+    if (!summaryEl) return
+
+    const observer = new ResizeObserver(measure)
+    observer.observe(summaryEl)
+    window.addEventListener("resize", measure)
+    return () => {
+      observer.disconnect()
+      window.removeEventListener("resize", measure)
+    }
+  }, [activities, layout.midnightY, textSizeVersion, i18n.language, loading])
+
+  const daySummaryBottom = Math.max(
+    estimatedDaySummaryBottom,
+    measuredDaySummaryBottom,
+  )
+  const daySummaryMinLabelY = getDaySummaryMinLabelY(daySummaryBottom)
+  const daySummaryMaxLabelY = getDaySummaryMaxLabelY(layout.height)
 
   const { recordedEvents, ongoingTimelineCards, ongoingCardLabelYs } =
     useMemo(() => {
@@ -280,6 +407,8 @@ export function DayTimelineSection({
         preferredYs,
         getScaledPx(DEFAULT_RECORDED_LABEL_EDGE_GAP_PX),
         getScaledLogCardHeightPx(LOG_CARD_ESTIMATED_HEIGHT_PX),
+        daySummaryMinLabelY,
+        daySummaryMaxLabelY,
       )
 
       return {
@@ -292,7 +421,17 @@ export function DayTimelineSection({
           (_, index) => labelYs[placed.length + index],
         ),
       }
-    }, [activities, date, isToday, now, items, layout, textSizeVersion])
+    }, [
+      activities,
+      date,
+      daySummaryMinLabelY,
+      daySummaryMaxLabelY,
+      isToday,
+      now,
+      items,
+      layout,
+      textSizeVersion,
+    ])
 
   useEffect(() => {
     function measure() {
@@ -334,6 +473,7 @@ export function DayTimelineSection({
           barX={connectorMetrics.barX}
           trunkX={connectorMetrics.trunkX}
           cardLeftX={connectorMetrics.cardLeftX}
+          className={logsFadeClass}
         />
 
         <div
@@ -502,17 +642,26 @@ export function DayTimelineSection({
           className="absolute top-0 right-0 z-20"
           style={{ height: layout.height, width: LOGS_PANEL_WIDTH }}
         >
-          <DayActivitySummary
-            activities={activities}
-            className="absolute right-0 left-6 -translate-y-1/2 text-left"
-            style={{ top: layout.midnightY }}
-          />
-          <RecordedEvents events={recordedEvents} loading={loading} now={now} />
-          <OngoingNowCards
-            cards={ongoingTimelineCards}
-            labelYs={ongoingCardLabelYs}
-            now={now}
-          />
+          <div className={logsFadeClass}>
+            <div
+              ref={summaryRef}
+              className="absolute right-0 left-6 z-30 pb-3 text-left"
+              style={{
+                top:
+                  layout.midnightY -
+                  daySummaryFirstLineHalfHeight +
+                  daySummaryVerticalOffset,
+              }}
+            >
+              <DayActivitySummary activities={activities} />
+            </div>
+            <RecordedEvents events={recordedEvents} loading={loading} now={now} />
+            <OngoingNowCards
+              cards={ongoingTimelineCards}
+              labelYs={ongoingCardLabelYs}
+              now={now}
+            />
+          </div>
         </div>
       </div>
     </section>

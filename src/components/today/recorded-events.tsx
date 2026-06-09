@@ -303,6 +303,7 @@ export function RecordedEventConnectors({
   barX,
   trunkX,
   cardLeftX,
+  className,
 }: {
   events: PlacedActivity[]
   ongoingConnectors?: OngoingConnector[]
@@ -310,11 +311,15 @@ export function RecordedEventConnectors({
   barX: number
   trunkX: number
   cardLeftX: number
+  className?: string
 }) {
   return (
     <svg
       aria-hidden
-      className="pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible"
+      className={cn(
+        "pointer-events-none absolute inset-0 z-20 h-full w-full overflow-visible",
+        className,
+      )}
     >
       {events.map(({ id, anchorY, labelY }) => (
         <path

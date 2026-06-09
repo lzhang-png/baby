@@ -565,9 +565,9 @@ export function LogPanel({ onLogged }: LogPanelProps) {
   void nursingTick
 
   return (
-    <Tabs defaultValue="feed" className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
-      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pt-3 pb-6">
-      <TabsContent value="feed" className="mt-0">
+    <Tabs defaultValue="feed" className="flex min-w-0 shrink-0 flex-col gap-0">
+      <div className="min-w-0 shrink-0 overflow-x-hidden px-4 pt-3 pb-4">
+      <TabsContent value="feed" className="mt-0 flex-none">
         <LogSection title={t("log.feeding")}>
           {feedType === "nursing" ? (
             <div className="flex flex-col gap-4">
@@ -686,7 +686,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
         </LogSection>
       </TabsContent>
 
-      <TabsContent value="sleep" className="mt-0">
+      <TabsContent value="sleep" className="mt-0 flex-none">
         <LogSection title={t("log.sleep")}>
             {activeSleepId ? (
               <>
@@ -736,7 +736,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
         </LogSection>
       </TabsContent>
 
-      <TabsContent value="diaper" className="mt-0">
+      <TabsContent value="diaper" className="mt-0 flex-none">
         <LogSection title={t("log.diaper")}>
             <form onSubmit={handleDiaper} className="flex flex-col gap-4">
               <LogDateTimeFields
@@ -777,7 +777,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
         </LogSection>
       </TabsContent>
 
-      <TabsContent value="pump" className="mt-0">
+      <TabsContent value="pump" className="mt-0 flex-none">
         <LogSection title={t("log.pumping")}>
             <form onSubmit={handlePump} className="flex flex-col gap-4">
               <LogDateTimeFields

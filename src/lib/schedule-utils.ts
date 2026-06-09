@@ -333,6 +333,8 @@ export function spreadLabelPositions(
   tops: number[],
   minEdgeGapPx = DEFAULT_RECORDED_LABEL_EDGE_GAP_PX,
   itemHeightPx = 46,
+  minCenterY = 0,
+  maxCenterY = Number.POSITIVE_INFINITY,
 ): number[] {
   if (tops.length === 0) return []
 
@@ -344,7 +346,10 @@ export function spreadLabelPositions(
   const result = new Array<number>(tops.length)
   let last = -Infinity
   for (const entry of sorted) {
-    const y = Math.max(entry.top, last + minCenterGap)
+    const y = Math.min(
+      Math.max(entry.top, last + minCenterGap, minCenterY),
+      maxCenterY,
+    )
     result[entry.index] = y
     last = y
   }

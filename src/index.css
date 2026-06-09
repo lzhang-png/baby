@@ -203,3 +203,8 @@
 .ongoing-card-pulse {
   animation: ongoing-card-pulse 2.8s ease-in-out infinite;
 }
+
+/* Vaul adds a tall ::after pseudo-element for drag affordance; it creates empty scroll space. */
+[data-slot="drawer-content"]::after {
+  display: none !important;
+}

@@ -6,6 +6,7 @@ import {
   CirclePlusIcon,
   ClipboardListIcon,
   MenuIcon,
+  ScrollTextIcon,
   UsersIcon,
   ZoomInIcon,
   ZoomOutIcon,
@@ -13,6 +14,7 @@ import {
 } from "lucide-react"
 
 import { LogPanel } from "@/components/log/log-panel"
+import { DaySummariesPanel } from "@/components/today/day-summaries-panel"
 import { ActivityRefreshProvider } from "@/contexts/activity-refresh-context"
 import { TimelineZoomProvider, useTimelineZoom } from "@/contexts/timeline-zoom-context"
 import { Button } from "@/components/ui/button"
@@ -74,17 +76,21 @@ function NavMenuItem({ item }: { item: NavItem }) {
 
 function BottomFabBar({
   logOpen,
+  summaryOpen,
   onLogOpen,
+  onSummaryOpen,
 }: {
   logOpen: boolean
+  summaryOpen: boolean
   onLogOpen: () => void
+  onSummaryOpen: () => void
 }) {
   const { t } = useTranslation()
   const { pathname } = useLocation()
   const isTimelinePage = isNavItemActive(pathname, "/today")
   const { zoomInEnabled, zoomOutEnabled, zoomIn, zoomOut } = useTimelineZoom()
 
-  if (logOpen) return null
+  if (logOpen || summaryOpen) return null
 
   return (
     <div
@@ -131,7 +137,15 @@ function BottomFabBar({
         </DropdownMenuTrigger>
         <DropdownMenuContent side="top" align="end" className="min-w-52 p-2">
           <DropdownMenuGroup>
-            {NAV.map((item) => (
+            <NavMenuItem item={NAV[0]} />
+            <DropdownMenuItem
+              className="min-h-12 gap-3 px-3 py-3 text-base font-medium [&_svg]:size-5"
+              onSelect={onSummaryOpen}
+            >
+              <ScrollTextIcon aria-hidden />
+              {t("nav.summary")}
+            </DropdownMenuItem>
+            {NAV.slice(1).map((item) => (
               <NavMenuItem key={item.to} item={item} />
             ))}
           </DropdownMenuGroup>
@@ -155,6 +169,7 @@ function BottomFabBar({
 
 export function AppShell() {
   const [logOpen, setLogOpen] = useState(false)
+  const [summaryOpen, setSummaryOpen] = useState(false)
   const { pathname } = useLocation()
   const isTimelinePage = isNavItemActive(pathname, "/today")
 
@@ -172,13 +187,34 @@ export function AppShell() {
         )}
       </main>
 
-      <BottomFabBar logOpen={logOpen} onLogOpen={() => setLogOpen(true)} />
+      <BottomFabBar
+        logOpen={logOpen}
+        summaryOpen={summaryOpen}
+        onLogOpen={() => setLogOpen(true)}
+        onSummaryOpen={() => setSummaryOpen(true)}
+      />
 
-      <Drawer open={logOpen} onOpenChange={setLogOpen} direction="bottom">
-        <DrawerContent className="flex max-h-[88vh] min-w-0 flex-col overflow-x-hidden bg-background pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
-          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-            <LogPanel onLogged={() => setLogOpen(false)} />
-          </div>
+      <Drawer
+        open={logOpen}
+        onOpenChange={setLogOpen}
+        direction="bottom"
+        handleOnly
+        repositionInputs={false}
+      >
+        <DrawerContent className="min-w-0 bg-background pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
+          <LogPanel onLogged={() => setLogOpen(false)} />
+        </DrawerContent>
+      </Drawer>
+
+      <Drawer
+        open={summaryOpen}
+        onOpenChange={setSummaryOpen}
+        direction="bottom"
+        handleOnly
+        repositionInputs={false}
+      >
+        <DrawerContent className="min-w-0 bg-background">
+          <DaySummariesPanel open={summaryOpen} />
         </DrawerContent>
       </Drawer>
       </div>

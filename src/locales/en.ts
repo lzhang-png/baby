@@ -40,6 +40,10 @@ const en = {
   },
   nav: {
     timeline: "Timeline",
+    summary: "Summary",
+    summaryDescription: "Daily totals for feeds, diapers, pumping, and sleep.",
+    summaryLoading: "Loading summaries…",
+    summaryEmpty: "No logged days yet.",
     schedule: "Schedule",
     settings: "Settings",
     openMenu: "Open navigation menu",

@@ -40,6 +40,10 @@ const zh = {
   },
   nav: {
     timeline: "时间线",
+    summary: "汇总",
+    summaryDescription: "查看每天喂奶、换尿布、吸奶和睡眠的统计。",
+    summaryLoading: "正在加载汇总…",
+    summaryEmpty: "还没有可汇总的记录。",
     schedule: "作息计划",
     settings: "设置",
     openMenu: "打开导航菜单",

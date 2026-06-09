@@ -139,63 +139,74 @@ export async function insertPump(input: {
   return data as PumpLog
 }
 
-export async function getActivitiesForDay(
+type ActivityLogPools = {
+  feeds: FeedLog[]
+  spanningFeeds: FeedLog[]
+  sleeps: SleepLog[]
+  activeSleeps: SleepLog[]
+  spanningEndedSleeps: SleepLog[]
+  diapers: DiaperLog[]
+  pumps: PumpLog[]
+}
+
+async function fetchActivityLogPools(
   babyId: string,
-  date: Date,
-): Promise<ActivityItem[]> {
-  const since = startOfDay(date).toISOString()
-  const until = endOfDay(date).toISOString()
+  rangeStart: Date,
+  rangeEnd: Date,
+): Promise<ActivityLogPools> {
+  const since = startOfDay(rangeStart).toISOString()
+  const until = endOfDay(rangeEnd).toISOString()
 
   const [feeds, spanningFeeds, sleeps, activeSleeps, spanningEndedSleeps, diapers, pumps] =
     await Promise.all([
-    supabase
-      .from("feed_logs")
-      .select("*")
-      .eq("baby_id", babyId)
-      .gte("occurred_at", since)
-      .lte("occurred_at", until)
-      .order("occurred_at", { ascending: false }),
-    supabase
-      .from("feed_logs")
-      .select("*")
-      .eq("baby_id", babyId)
-      .eq("feed_type", "nursing")
-      .is("duration_min", null)
-      .lt("occurred_at", since),
-    supabase
-      .from("sleep_logs")
-      .select("*")
-      .eq("baby_id", babyId)
-      .gte("started_at", since)
-      .lte("started_at", until)
-      .order("started_at", { ascending: false }),
-    supabase
-      .from("sleep_logs")
-      .select("*")
-      .eq("baby_id", babyId)
-      .is("ended_at", null),
-    supabase
-      .from("sleep_logs")
-      .select("*")
-      .eq("baby_id", babyId)
-      .lt("started_at", since)
-      .not("ended_at", "is", null)
-      .gte("ended_at", since),
-    supabase
-      .from("diaper_logs")
-      .select("*")
-      .eq("baby_id", babyId)
-      .gte("occurred_at", since)
-      .lte("occurred_at", until)
-      .order("occurred_at", { ascending: false }),
-    supabase
-      .from("pump_logs")
-      .select("*")
-      .eq("baby_id", babyId)
-      .gte("occurred_at", since)
-      .lte("occurred_at", until)
-      .order("occurred_at", { ascending: false }),
-  ])
+      supabase
+        .from("feed_logs")
+        .select("*")
+        .eq("baby_id", babyId)
+        .gte("occurred_at", since)
+        .lte("occurred_at", until)
+        .order("occurred_at", { ascending: false }),
+      supabase
+        .from("feed_logs")
+        .select("*")
+        .eq("baby_id", babyId)
+        .eq("feed_type", "nursing")
+        .is("duration_min", null)
+        .lt("occurred_at", until),
+      supabase
+        .from("sleep_logs")
+        .select("*")
+        .eq("baby_id", babyId)
+        .gte("started_at", since)
+        .lte("started_at", until)
+        .order("started_at", { ascending: false }),
+      supabase
+        .from("sleep_logs")
+        .select("*")
+        .eq("baby_id", babyId)
+        .is("ended_at", null),
+      supabase
+        .from("sleep_logs")
+        .select("*")
+        .eq("baby_id", babyId)
+        .lt("started_at", until)
+        .not("ended_at", "is", null)
+        .gte("ended_at", since),
+      supabase
+        .from("diaper_logs")
+        .select("*")
+        .eq("baby_id", babyId)
+        .gte("occurred_at", since)
+        .lte("occurred_at", until)
+        .order("occurred_at", { ascending: false }),
+      supabase
+        .from("pump_logs")
+        .select("*")
+        .eq("baby_id", babyId)
+        .gte("occurred_at", since)
+        .lte("occurred_at", until)
+        .order("occurred_at", { ascending: false }),
+    ])
 
   if (feeds.error) throw feeds.error
   if (spanningFeeds.error) throw spanningFeeds.error
@@ -205,18 +216,47 @@ export async function getActivitiesForDay(
   if (diapers.error) throw diapers.error
   if (pumps.error) throw pumps.error
 
+  return {
+    feeds: (feeds.data ?? []) as FeedLog[],
+    spanningFeeds: (spanningFeeds.data ?? []) as FeedLog[],
+    sleeps: (sleeps.data ?? []) as SleepLog[],
+    activeSleeps: (activeSleeps.data ?? []) as SleepLog[],
+    spanningEndedSleeps: (spanningEndedSleeps.data ?? []) as SleepLog[],
+    diapers: (diapers.data ?? []) as DiaperLog[],
+    pumps: (pumps.data ?? []) as PumpLog[],
+  }
+}
+
+function buildActivitiesForDay(
+  pools: ActivityLogPools,
+  date: Date,
+): ActivityItem[] {
+  const since = startOfDay(date).toISOString()
+  const until = endOfDay(date).toISOString()
+  const sinceMs = new Date(since).getTime()
+  const untilMs = new Date(until).getTime()
+
   const feedMap = new Map<string, FeedLog>()
-  for (const row of [...(feeds.data ?? []), ...(spanningFeeds.data ?? [])]) {
-    feedMap.set(row.id, row as FeedLog)
+  for (const row of pools.feeds) {
+    const atMs = new Date(row.occurred_at).getTime()
+    if (atMs >= sinceMs && atMs <= untilMs) feedMap.set(row.id, row)
+  }
+  for (const row of pools.spanningFeeds) {
+    if (new Date(row.occurred_at).getTime() < sinceMs) feedMap.set(row.id, row)
   }
 
   const sleepMap = new Map<string, SleepLog>()
-  for (const row of [
-    ...(sleeps.data ?? []),
-    ...(activeSleeps.data ?? []),
-    ...(spanningEndedSleeps.data ?? []),
-  ]) {
-    sleepMap.set(row.id, row as SleepLog)
+  for (const row of pools.sleeps) {
+    const atMs = new Date(row.started_at).getTime()
+    if (atMs >= sinceMs && atMs <= untilMs) sleepMap.set(row.id, row)
+  }
+  for (const row of pools.activeSleeps) {
+    sleepMap.set(row.id, row)
+  }
+  for (const row of pools.spanningEndedSleeps) {
+    const startedMs = new Date(row.started_at).getTime()
+    const endedMs = new Date(row.ended_at!).getTime()
+    if (startedMs < sinceMs && endedMs >= sinceMs) sleepMap.set(row.id, row)
   }
 
   const items: ActivityItem[] = [
@@ -230,21 +270,67 @@ export async function getActivitiesForDay(
       at: d.started_at,
       data: d,
     })),
-    ...(diapers.data ?? []).map((d) => ({
-      kind: "diaper" as const,
-      at: d.occurred_at,
-      data: d as DiaperLog,
-    })),
-    ...(pumps.data ?? []).map((d) => ({
-      kind: "pump" as const,
-      at: d.occurred_at,
-      data: d as PumpLog,
-    })),
+    ...pools.diapers
+      .filter((d) => {
+        const atMs = new Date(d.occurred_at).getTime()
+        return atMs >= sinceMs && atMs <= untilMs
+      })
+      .map((d) => ({
+        kind: "diaper" as const,
+        at: d.occurred_at,
+        data: d,
+      })),
+    ...pools.pumps
+      .filter((d) => {
+        const atMs = new Date(d.occurred_at).getTime()
+        return atMs >= sinceMs && atMs <= untilMs
+      })
+      .map((d) => ({
+        kind: "pump" as const,
+        at: d.occurred_at,
+        data: d,
+      })),
   ]
 
   return items.sort(
     (a, b) => new Date(b.at).getTime() - new Date(a.at).getTime(),
   )
+}
+
+function dayKey(date: Date) {
+  return startOfDay(date).toISOString()
+}
+
+export async function getActivitiesForDay(
+  babyId: string,
+  date: Date,
+): Promise<ActivityItem[]> {
+  const pools = await fetchActivityLogPools(babyId, date, date)
+  return buildActivitiesForDay(pools, date)
+}
+
+export async function getActivitiesForDays(
+  babyId: string,
+  dates: Date[],
+): Promise<Map<string, ActivityItem[]>> {
+  if (dates.length === 0) return new Map()
+
+  let min = startOfDay(dates[0])
+  let max = startOfDay(dates[0])
+  for (const date of dates) {
+    const day = startOfDay(date)
+    if (day < min) min = day
+    if (day > max) max = day
+  }
+
+  const pools = await fetchActivityLogPools(babyId, min, max)
+  const byDay = new Map<string, ActivityItem[]>()
+
+  for (const date of dates) {
+    byDay.set(dayKey(date), buildActivitiesForDay(pools, date))
+  }
+
+  return byDay
 }
 
 export async function getTodayActivities(babyId: string) {

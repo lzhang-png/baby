@@ -1,16 +1,20 @@
 import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 import {
+  BlendIcon,
   DropletsIcon,
+  DropletOffIcon,
   EllipsisVerticalIcon,
   MilkIcon,
   MoonIcon,
   SunIcon,
+  ToiletIcon,
   type LucideIcon,
 } from "lucide-react"
 import { toast } from "sonner"
 
 import { PumpIcon } from "@/components/icons/pump-icon"
+import { DiaperIcon } from "@/components/icons/diaper-icon"
 import { EditLogDrawer } from "@/components/log/edit-log-drawer"
 import {
   activitySummary,
@@ -29,14 +33,30 @@ import { useActivityRefresh } from "@/contexts/activity-refresh-context"
 import { deleteActivity } from "@/lib/api/logs"
 import { isEditableActivity } from "@/lib/activity-utils"
 import type { SleepTimelinePhase } from "@/lib/sleep-timeline"
-import type { ActivityItem } from "@/lib/types"
+import type { ActivityItem, DiaperType } from "@/lib/types"
 import { cn } from "@/lib/utils"
 
 export const RECORDED_ICONS: Record<ActivityItem["kind"], LucideIcon> = {
   feed: MilkIcon,
   sleep: MoonIcon,
-  diaper: DropletsIcon,
+  diaper: DiaperIcon,
   pump: PumpIcon,
+}
+
+const DIAPER_TYPE_ICONS: Record<DiaperType, LucideIcon> = {
+  wet: DropletsIcon,
+  dirty: ToiletIcon,
+  mixed: BlendIcon,
+  dry: DropletOffIcon,
+}
+
+export function getRecordedIcon(
+  item: ActivityItem,
+  sleepPhase?: SleepTimelinePhase,
+): LucideIcon {
+  if (item.kind === "sleep" && sleepPhase === "end") return SunIcon
+  if (item.kind === "diaper") return DIAPER_TYPE_ICONS[item.data.diaper_type]
+  return RECORDED_ICONS[item.kind]
 }
 
 export const LOG_CARD_LEFT_OFFSET_PX = 24 // matches left-6 on card wrapper
@@ -44,7 +64,7 @@ export const CONNECTOR_TRUNK_OFFSET_PX = 16
 export const TIMELINE_MUTED_LINE_CLASS = "bg-timeline-line"
 export const TIMELINE_CONNECTOR_STROKE_CLASS = "stroke-timeline-line"
 export const CONNECTOR_CORNER_RADIUS_PX = 6
-export const LOG_CARD_ESTIMATED_HEIGHT_PX = 52 // xs time + sm detail + py-1.5
+export const LOG_CARD_ESTIMATED_HEIGHT_PX = 56 // xs time + sm detail + p-2
 
 function buildRoundedConnectorPath(
   barX: number,
@@ -91,7 +111,7 @@ const EVENT_CARD_MAX_WIDTH = "max-w-[280px]"
 export const RECORDED_COLORS: Record<ActivityItem["kind"], string> = {
   feed: "text-sky-400",
   sleep: "text-indigo-400",
-  diaper: "text-emerald-400",
+  diaper: "text-amber-700",
   pump: "text-violet-400",
 }
 
@@ -132,10 +152,7 @@ type EventCardProps = {
 function EventCard({ event, now, onEdit, onDelete }: EventCardProps) {
   const { t } = useTranslation()
   const { item, displayAt, sleepPhase } = event
-  const Icon =
-    item.kind === "sleep" && sleepPhase === "end"
-      ? SunIcon
-      : RECORDED_ICONS[item.kind]
+  const Icon = getRecordedIcon(item, sleepPhase)
   const editable =
     isEditableActivity(item) &&
     (!sleepPhase ||
@@ -147,7 +164,7 @@ function EventCard({ event, now, onEdit, onDelete }: EventCardProps) {
   return (
     <div
       className={cn(
-        "bg-card flex w-full items-start gap-2 rounded-lg px-2.5 py-1.5 shadow-sm",
+        "bg-card flex w-full items-start gap-2 rounded-lg p-2 shadow-sm",
         EVENT_CARD_MAX_WIDTH,
       )}
     >
@@ -277,7 +294,7 @@ export function OngoingNowCards({ cards, labelYs, now }: OngoingNowCardsProps) {
   return (
     <>
       {cards.map((card, index) => {
-        const Icon = RECORDED_ICONS[card.item.kind]
+        const Icon = getRecordedIcon(card.item)
         return (
           <div
             key={card.id}
@@ -286,7 +303,7 @@ export function OngoingNowCards({ cards, labelYs, now }: OngoingNowCardsProps) {
           >
             <div
               className={cn(
-                "ongoing-card-pulse flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 shadow-sm",
+                "ongoing-card-pulse flex w-full items-center gap-2 rounded-lg p-2 shadow-sm",
                 EVENT_CARD_MAX_WIDTH,
               )}
             >

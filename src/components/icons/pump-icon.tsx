@@ -17,12 +17,12 @@ export const PumpIcon = forwardRef<SVGSVGElement, LucideProps>(
       className={className}
       {...props}
     >
-      <path d="M7.5 3h9l1.75 4.75a.5.5 0 0 1-.48.65H6.23a.5.5 0 0 1-.48-.65L7.5 3z" />
-      <circle cx="12" cy="6.2" r="0.9" fill="currentColor" stroke="none" />
-      <path d="M12 8.4V10" />
-      <rect x="9.5" y="10" width="5" height="3.5" rx="0.75" />
-      <path d="M10 13.5h4c.55 0 1 .4 1 .9V19c0 1.1-.9 2-2 2h-2c-1.1 0-2-.9-2-2v-4.6c0-.5.45-.9 1-.9z" />
-      <path d="M9.5 21h5" />
+      <path d="M7 3.5h10l1.4 4.2a.7.7 0 0 1-.65.9H6.25a.7.7 0 0 1-.65-.9L7 3.5z" />
+      <path d="M9 8.6c.7 1.1 1.7 1.7 3 1.7s2.3-.6 3-1.7" />
+      <path d="M10 10.3h4v3.2h-4z" />
+      <path d="M9 13.5h6l.8 6.1c.1.8-.5 1.4-1.3 1.4h-5c-.8 0-1.4-.6-1.3-1.4L9 13.5z" />
+      <path d="M10.2 16.2h1.3" />
+      <path d="M10.2 18.4h1.3" />
     </svg>
   ),
 )

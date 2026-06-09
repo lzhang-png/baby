@@ -6,6 +6,8 @@ import {
   CirclePlusIcon,
   ClipboardListIcon,
   MenuIcon,
+  MilkIcon,
+  MoonIcon,
   ScrollTextIcon,
   UsersIcon,
   ZoomInIcon,
@@ -13,8 +15,11 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-import { LogPanel } from "@/components/log/log-panel"
+import { PumpIcon } from "@/components/icons/pump-icon"
+import { DiaperIcon } from "@/components/icons/diaper-icon"
+import { LogPanel, type LogPanelType } from "@/components/log/log-panel"
 import { DaySummariesPanel } from "@/components/today/day-summaries-panel"
+import { RECORDED_COLORS } from "@/components/today/recorded-events"
 import { ActivityRefreshProvider } from "@/contexts/activity-refresh-context"
 import { TimelineZoomProvider, useTimelineZoom } from "@/contexts/timeline-zoom-context"
 import { Button } from "@/components/ui/button"
@@ -42,6 +47,19 @@ const NAV: NavItem[] = [
 
 const FAB_BOTTOM = "calc(1rem + env(safe-area-inset-bottom, 0px))"
 const FAB_CLASS = "size-14 rounded-full shadow-lg"
+
+type LogMenuItem = {
+  type: LogPanelType
+  labelKey: "log.feed" | "log.sleep" | "log.diaper" | "log.pump"
+  icon: LucideIcon | typeof PumpIcon | typeof DiaperIcon
+}
+
+const LOG_MENU: LogMenuItem[] = [
+  { type: "feed", labelKey: "log.feed", icon: MilkIcon },
+  { type: "sleep", labelKey: "log.sleep", icon: MoonIcon },
+  { type: "diaper", labelKey: "log.diaper", icon: DiaperIcon },
+  { type: "pump", labelKey: "log.pump", icon: PumpIcon },
+]
 
 function isNavItemActive(pathname: string, to: string) {
   return pathname === to || pathname.endsWith(to)
@@ -77,12 +95,12 @@ function NavMenuItem({ item }: { item: NavItem }) {
 function BottomFabBar({
   logOpen,
   summaryOpen,
-  onLogOpen,
+  onLogSelect,
   onSummaryOpen,
 }: {
   logOpen: boolean
   summaryOpen: boolean
-  onLogOpen: () => void
+  onLogSelect: (type: LogPanelType) => void
   onSummaryOpen: () => void
 }) {
   const { t } = useTranslation()
@@ -152,24 +170,42 @@ function BottomFabBar({
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <Button
-        size="icon"
-        aria-label={t("nav.logActivity")}
-        className={cn(
-          FAB_CLASS,
-          "bg-blue-500 text-white hover:bg-blue-600",
-        )}
-        onClick={onLogOpen}
-      >
-        <CirclePlusIcon className="size-6" />
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            size="icon"
+            aria-label={t("nav.logActivity")}
+            className={cn(
+              FAB_CLASS,
+              "bg-blue-500 text-white hover:bg-blue-600",
+            )}
+          >
+            <CirclePlusIcon className="size-6" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent side="top" align="end" className="min-w-52 p-2">
+          <DropdownMenuGroup>
+            {LOG_MENU.map(({ type, labelKey, icon: Icon }) => (
+              <DropdownMenuItem
+                key={type}
+                className="min-h-12 gap-3 px-3 py-3 text-base font-medium [&_svg]:size-5"
+                onSelect={() => onLogSelect(type)}
+              >
+                <Icon aria-hidden className={cn("size-5", RECORDED_COLORS[type])} />
+                {t(labelKey)}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }
 
 export function AppShell() {
-  const [logOpen, setLogOpen] = useState(false)
+  const [logPanelType, setLogPanelType] = useState<LogPanelType | null>(null)
   const [summaryOpen, setSummaryOpen] = useState(false)
+  const logOpen = logPanelType !== null
   const { pathname } = useLocation()
   const isTimelinePage = isNavItemActive(pathname, "/today")
 
@@ -190,13 +226,15 @@ export function AppShell() {
       <BottomFabBar
         logOpen={logOpen}
         summaryOpen={summaryOpen}
-        onLogOpen={() => setLogOpen(true)}
+        onLogSelect={setLogPanelType}
         onSummaryOpen={() => setSummaryOpen(true)}
       />
 
       <Drawer
         open={logOpen}
-        onOpenChange={setLogOpen}
+        onOpenChange={(open) => {
+          if (!open) setLogPanelType(null)
+        }}
         direction="bottom"
         handleOnly
         repositionInputs={false}
@@ -205,7 +243,12 @@ export function AppShell() {
           showHandle={false}
           className="min-w-0 bg-background pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]"
         >
-          <LogPanel onLogged={() => setLogOpen(false)} />
+          {logPanelType ? (
+            <LogPanel
+              type={logPanelType}
+              onLogged={() => setLogPanelType(null)}
+            />
+          ) : null}
         </DrawerContent>
       </Drawer>
 

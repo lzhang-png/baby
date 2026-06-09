@@ -3,6 +3,7 @@ import { Loader2Icon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { DayActivitySummary } from "@/components/today/day-activity-summary"
+import { DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { useActivityRefresh } from "@/contexts/activity-refresh-context"
 import { useAuth } from "@/contexts/auth-context"
 import { getActivitiesForDays } from "@/lib/api/logs"
@@ -82,7 +83,11 @@ export function DaySummariesPanel({ open }: DaySummariesPanelProps) {
   }, [open, baby?.id, navigationDays, version])
 
   return (
-    <div className="max-h-[calc(88dvh-2.5rem)] overflow-y-auto overscroll-contain pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] pt-2">
+    <>
+      <DrawerHeader>
+        <DrawerTitle>{t("nav.summary")}</DrawerTitle>
+      </DrawerHeader>
+      <div className="max-h-[calc(88dvh-7rem)] overflow-y-auto overscroll-contain pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))]">
       {showLoading ? (
         <div
           className="text-muted-foreground flex flex-col items-center justify-center gap-3 px-4 py-12 text-sm"
@@ -114,6 +119,7 @@ export function DaySummariesPanel({ open }: DaySummariesPanelProps) {
           ))}
         </ul>
       )}
-    </div>
+      </div>
+    </>
   )
 }

@@ -3,7 +3,6 @@ import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
 import {
-  deleteActivity,
   updateDiaper,
   updateFeed,
   updatePump,
@@ -16,6 +15,7 @@ import type {
   FeedType,
   NursingSide,
 } from "@/lib/types"
+import { AnimatedHeight } from "@/components/ui/animated-height"
 import { Button } from "@/components/ui/button"
 import {
   Drawer,
@@ -26,15 +26,7 @@ import {
 } from "@/components/ui/drawer"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Textarea } from "@/components/ui/textarea"
+import { SegmentedControl } from "@/components/ui/segmented-control"
 
 type EditLogDrawerProps = {
   item: ActivityItem | null
@@ -161,23 +153,6 @@ export function EditLogDrawer({
     }
   }
 
-  async function handleDelete() {
-    if (!item) return
-    if (!confirm(t("log.deleteConfirm"))) return
-
-    setSubmitting(true)
-    try {
-      await deleteActivity(item)
-      toast.success(t("log.logDeleted"))
-      onOpenChange(false)
-      onSaved()
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : t("log.logDeleteFailed"))
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   return (
     <Drawer open={open} onOpenChange={onOpenChange} direction="bottom">
       <DrawerContent className="flex max-h-[88vh] flex-col bg-background">
@@ -190,10 +165,25 @@ export function EditLogDrawer({
         {item && (
           <form
             onSubmit={handleSave}
-            className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 pb-4"
+            className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 pb-4"
           >
+            <AnimatedHeight>
+            <div className="flex flex-col gap-4">
             {item.kind === "feed" && (
               <>
+                <div className="flex flex-col gap-2">
+                  <Label>{t("common.type")}</Label>
+                  <SegmentedControl
+                    value={feedType}
+                    onValueChange={setFeedType}
+                    options={[
+                      { value: "nursing", label: t("log.nursing") },
+                      { value: "formula", label: t("log.formula") },
+                      { value: "expressed", label: t("log.expressed") },
+                      { value: "donated", label: t("log.donated") },
+                    ]}
+                  />
+                </div>
                 <div className="flex flex-col gap-2">
                   <Label htmlFor="edit-when">{t("common.time")}</Label>
                   <Input
@@ -202,25 +192,6 @@ export function EditLogDrawer({
                     value={when}
                     onChange={(e) => setWhen(e.target.value)}
                   />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>{t("common.type")}</Label>
-                  <Select
-                    value={feedType}
-                    onValueChange={(v) => setFeedType(v as FeedType)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                        <SelectItem value="nursing">{t("log.nursing")}</SelectItem>
-                        <SelectItem value="formula">{t("log.formula")}</SelectItem>
-                        <SelectItem value="expressed">{t("log.expressed")}</SelectItem>
-                        <SelectItem value="donated">{t("log.donated")}</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
                 </div>
                 {feedType === "nursing" ? (
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -236,21 +207,14 @@ export function EditLogDrawer({
                     </div>
                     <div className="flex flex-col gap-2">
                       <Label>{t("log.side")}</Label>
-                      <Select
+                      <SegmentedControl
                         value={side}
-                        onValueChange={(v) => setSide(v as NursingSide)}
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectGroup>
-                            <SelectItem value="L">{t("common.left")}</SelectItem>
-                            <SelectItem value="R">{t("common.right")}</SelectItem>
-                            <SelectItem value="both">{t("common.both")}</SelectItem>
-                          </SelectGroup>
-                        </SelectContent>
-                      </Select>
+                        onValueChange={setSide}
+                        options={[
+                          { value: "L", label: t("common.left") },
+                          { value: "R", label: t("common.right") },
+                        ]}
+                      />
                     </div>
                   </div>
                 ) : (
@@ -294,6 +258,19 @@ export function EditLogDrawer({
             {item.kind === "diaper" && (
               <>
                 <div className="flex flex-col gap-2">
+                  <Label>{t("common.type")}</Label>
+                  <SegmentedControl
+                    value={diaperType}
+                    onValueChange={setDiaperType}
+                    options={[
+                      { value: "wet", label: t("log.wet") },
+                      { value: "dirty", label: t("log.dirty") },
+                      { value: "mixed", label: t("log.mixed") },
+                      { value: "dry", label: t("log.dry") },
+                    ]}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
                   <Label htmlFor="edit-diaper-when">{t("common.time")}</Label>
                   <Input
                     id="edit-diaper-when"
@@ -301,25 +278,6 @@ export function EditLogDrawer({
                     value={when}
                     onChange={(e) => setWhen(e.target.value)}
                   />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label>{t("common.type")}</Label>
-                  <Select
-                    value={diaperType}
-                    onValueChange={(v) => setDiaperType(v as DiaperType)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectGroup>
-                      <SelectItem value="wet">{t("log.wet")}</SelectItem>
-                      <SelectItem value="dirty">{t("log.dirty")}</SelectItem>
-                      <SelectItem value="mixed">{t("log.mixed")}</SelectItem>
-                      <SelectItem value="dry">{t("log.dry")}</SelectItem>
-                      </SelectGroup>
-                    </SelectContent>
-                  </Select>
                 </div>
               </>
             )}
@@ -370,29 +328,13 @@ export function EditLogDrawer({
               </>
             )}
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="edit-notes">{t("common.notes")}</Label>
-              <Textarea
-                id="edit-notes"
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-                rows={2}
-              />
-            </div>
-
             <DrawerFooter className="px-0">
               <Button type="submit" disabled={submitting}>
                 {t("common.saveChanges")}
               </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={submitting}
-                onClick={handleDelete}
-              >
-                {t("log.deleteLog")}
-              </Button>
             </DrawerFooter>
+            </div>
+            </AnimatedHeight>
           </form>
         )}
       </DrawerContent>

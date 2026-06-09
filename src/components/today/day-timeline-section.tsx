@@ -15,7 +15,11 @@ import {
   type LucideIcon,
 } from "lucide-react"
 
-import { getOngoingTimelineCards } from "@/components/log/activity-label"
+import {
+  activitySummary,
+  getOngoingTimelineCards,
+  ongoingTimelineLabel,
+} from "@/components/log/activity-label"
 import { DayActivitySummary } from "@/components/today/day-activity-summary"
 import { buildDayActivitySummary } from "@/lib/day-activity-summary"
 import {
@@ -35,7 +39,13 @@ import {
 } from "@/lib/baby-tracker-import"
 import { formatDayHeading, isSameDay, startOfDay } from "@/lib/format"
 import { expandActivitiesForTimeline } from "@/lib/sleep-timeline"
-import { getScaledLogCardHeightPx, getScaledPx, useTextSizeVersion } from "@/lib/text-size"
+import {
+  getScaledLogCardHeightPx,
+  getScaledPx,
+  getTextSizeScale,
+  useTextSizeVersion,
+} from "@/lib/text-size"
+import { isEditableActivity } from "@/lib/activity-utils"
 import type { ActivityItem } from "@/lib/types"
 import type { ActivityKind } from "@/lib/schedule-data"
 import {
@@ -112,6 +122,84 @@ function getDaySummaryMaxLabelY(layoutHeight: number): number {
   const gap = getScaledPx(DAY_SUMMARY_CARD_GAP_PX)
 
   return layoutHeight - gap - cardHalf
+}
+
+const CARD_SUMMARY_LINE_HEIGHT_PX = 20 // text-sm leading-snug
+const CARD_HORIZONTAL_CHROME_PX = 16 + 14 + 8 // p-2 ×2 + icon + gap
+const CARD_EDIT_MENU_WIDTH_PX = 32 + 8 // size-8 button + gap
+const CARD_SUMMARY_BASE_FONT_PX = 14 // text-sm
+
+let cardTextMeasureCtx: CanvasRenderingContext2D | null | undefined
+
+function getCardTextMeasureCtx(): CanvasRenderingContext2D | null {
+  if (cardTextMeasureCtx !== undefined) return cardTextMeasureCtx
+  if (typeof document === "undefined") {
+    cardTextMeasureCtx = null
+    return null
+  }
+  cardTextMeasureCtx = document.createElement("canvas").getContext("2d")
+  return cardTextMeasureCtx
+}
+
+function countWrappedLines(
+  text: string,
+  maxWidthPx: number,
+  fontPx: number,
+  fontFamily: string,
+): number {
+  const ctx = getCardTextMeasureCtx()
+  if (!ctx || maxWidthPx <= 0) return 1
+
+  ctx.font = `${fontPx}px ${fontFamily}`
+  const words = text.split(/\s+/).filter(Boolean)
+  if (words.length === 0) return 1
+
+  let lines = 1
+  let current = ""
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word
+    if (!current || ctx.measureText(candidate).width <= maxWidthPx) {
+      current = candidate
+    } else {
+      lines += 1
+      current = word
+    }
+  }
+  return lines
+}
+
+/**
+ * Estimates a timeline card's rendered height so that spreadLabelPositions can
+ * keep the minimum gap even when the summary text wraps to multiple lines.
+ */
+function estimateRecordedCardHeightPx(
+  summary: string,
+  cardWidthPx: number,
+  editable: boolean,
+  fontFamily: string,
+): number {
+  const base = getScaledLogCardHeightPx(LOG_CARD_ESTIMATED_HEIGHT_PX)
+  if (cardWidthPx <= 0) return base
+
+  const chrome =
+    CARD_HORIZONTAL_CHROME_PX + (editable ? CARD_EDIT_MENU_WIDTH_PX : 0)
+  const textWidth = cardWidthPx - chrome
+  const fontPx = CARD_SUMMARY_BASE_FONT_PX * getTextSizeScale()
+  const lines = countWrappedLines(summary, textWidth, fontPx, fontFamily)
+
+  return base + (lines - 1) * getScaledPx(CARD_SUMMARY_LINE_HEIGHT_PX)
+}
+
+function isRecordedEventEditable(
+  item: ActivityItem,
+  sleepPhase?: "start" | "end",
+): boolean {
+  return (
+    isEditableActivity(item) &&
+    (!sleepPhase ||
+      sleepPhase === "end" ||
+      (sleepPhase === "start" && item.kind === "sleep" && !item.data.ended_at))
+  )
 }
 
 const ICON_COLORS: Record<CheckpointIconKind, string> = {
@@ -257,6 +345,7 @@ export function DayTimelineSection({
     barX: 0,
     trunkX: 0,
     cardLeftX: 0,
+    cardWidth: 0,
   })
   const textSizeVersion = useTextSizeVersion()
 
@@ -395,12 +484,43 @@ export function DayTimelineSection({
         LOG_CARD_ESTIMATED_HEIGHT_PX,
       )
 
+      const fontFamily =
+        typeof document !== "undefined"
+          ? getComputedStyle(document.body).fontFamily || "sans-serif"
+          : "sans-serif"
+      const cardWidth = connectorMetrics.cardWidth
+
+      const itemHeights = [
+        ...placed.map((event) =>
+          estimateRecordedCardHeightPx(
+            activitySummary(event.item, {
+              sleepPhase: event.sleepPhase,
+              now,
+            }),
+            cardWidth,
+            isRecordedEventEditable(event.item, event.sleepPhase),
+            fontFamily,
+          ),
+        ),
+        ...(nowAnchorY != null
+          ? ongoing.map((card) =>
+              estimateRecordedCardHeightPx(
+                ongoingTimelineLabel(card.item, now),
+                cardWidth,
+                false,
+                fontFamily,
+              ),
+            )
+          : []),
+      ]
+
       const labelYs = spreadLabelPositions(
         preferredYs,
         getScaledPx(DEFAULT_RECORDED_LABEL_EDGE_GAP_PX),
         defaultCardHeight,
         daySummaryMinLabelY,
         daySummaryMaxLabelY,
+        itemHeights,
       )
 
       return {
@@ -423,6 +543,7 @@ export function DayTimelineSection({
       items,
       layout,
       textSizeVersion,
+      connectorMetrics.cardWidth,
     ])
 
   useEffect(() => {
@@ -434,10 +555,12 @@ export function DayTimelineSection({
       const rootRect = root.getBoundingClientRect()
       const barRect = bar.getBoundingClientRect()
       const logsPanelLeft = rootRect.width * SCHEDULE_PANEL_RATIO
+      const logsPanelWidth = rootRect.width * (1 - SCHEDULE_PANEL_RATIO)
       setConnectorMetrics({
         barX: barRect.left + barRect.width / 2 - rootRect.left,
         trunkX: logsPanelLeft + CONNECTOR_TRUNK_OFFSET_PX,
         cardLeftX: logsPanelLeft + LOG_CARD_LEFT_OFFSET_PX,
+        cardWidth: Math.min(logsPanelWidth - LOG_CARD_LEFT_OFFSET_PX, 280),
       })
     }
 

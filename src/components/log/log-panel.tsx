@@ -1,9 +1,7 @@
 import { useEffect, useState } from "react"
-import { DropletsIcon, MilkIcon, MoonIcon } from "lucide-react"
 import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
-import { PumpIcon } from "@/components/icons/pump-icon"
 import { useActivityRefresh } from "@/contexts/activity-refresh-context"
 import { useAuth } from "@/contexts/auth-context"
 import {
@@ -27,22 +25,16 @@ import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DrawerHandle, DrawerHandleBar } from "@/components/ui/drawer"
+import { SegmentedControl } from "@/components/ui/segmented-control"
+import { AnimatedHeight } from "@/components/ui/animated-height"
+import { DrawerHandle, DrawerHandleBar, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
+
+export type LogPanelType = "feed" | "sleep" | "diaper" | "pump"
+
 type LogPanelProps = {
+  type: LogPanelType
   onLogged?: () => void
 }
-
-const LOG_TAB_CLASS =
-  "flex !h-auto min-h-0 flex-1 flex-col items-center gap-1 rounded-none border-0 bg-transparent px-2 py-2 text-[10px] font-medium leading-tight text-muted-foreground shadow-none transition-colors after:hidden hover:text-foreground data-active:bg-transparent data-active:text-primary data-active:shadow-none"
 
 const LOG_SUBMIT_CLASS = "h-10 w-full"
 
@@ -250,14 +242,16 @@ function LogSection({
   children: React.ReactNode
 }) {
   return (
-    <section className="flex flex-col gap-4">
-      <h2 className="font-heading text-base font-medium">{title}</h2>
-      {children}
+    <section className="flex flex-col">
+      <DrawerHeader>
+        <DrawerTitle>{title}</DrawerTitle>
+      </DrawerHeader>
+      <div className="flex flex-col gap-4 px-4 pb-4">{children}</div>
     </section>
   )
 }
 
-export function LogPanel({ onLogged }: LogPanelProps) {
+export function LogPanel({ type, onLogged }: LogPanelProps) {
   const { t } = useTranslation()
   const { version, notifyActivityChanged } = useActivityRefresh()
   const { user, baby } = useAuth()
@@ -566,34 +560,27 @@ export function LogPanel({ onLogged }: LogPanelProps) {
   void nursingTick
 
   return (
-    <Tabs defaultValue="feed" className="flex min-w-0 shrink-0 flex-col gap-0">
-      <DrawerHandle className="min-w-0 flex-col">
-        <div className="flex w-full justify-center py-2">
-          <DrawerHandleBar />
-        </div>
-        <div className="min-w-0 shrink-0 overflow-x-hidden px-4 pt-3 pb-4">
-      <TabsContent value="feed" className="mt-0 flex-none">
+    <DrawerHandle className="min-w-0 flex-col">
+      <div className="flex w-full justify-center py-2">
+        <DrawerHandleBar />
+      </div>
+      <AnimatedHeight className="min-w-0 shrink-0 overflow-x-hidden">
+        {type === "feed" && (
         <LogSection title={t("log.feeding")}>
           {feedType === "nursing" ? (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label>{t("common.type")}</Label>
-                <Select
+                <SegmentedControl
                   value={feedType}
-                  onValueChange={(v) => setFeedType(v as FeedType)}
+                  onValueChange={setFeedType}
                   disabled={isNursingActive}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="formula">{t("log.formula")}</SelectItem>
-                      <SelectItem value="expressed">{t("log.expressed")}</SelectItem>
-                      <SelectItem value="nursing">{t("log.nursing")}</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                  options={[
+                    { value: "formula", label: t("log.formula") },
+                    { value: "expressed", label: t("log.expressed") },
+                    { value: "nursing", label: t("log.nursing") },
+                  ]}
+                />
               </div>
               <div className="flex flex-col gap-2">
                 <Label>{t("log.sides")}</Label>
@@ -645,21 +632,15 @@ export function LogPanel({ onLogged }: LogPanelProps) {
             <form onSubmit={handleFeed} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label>{t("common.type")}</Label>
-                <Select
+                <SegmentedControl
                   value={feedType}
-                  onValueChange={(v) => setFeedType(v as FeedType)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="formula">{t("log.formula")}</SelectItem>
-                      <SelectItem value="expressed">{t("log.expressed")}</SelectItem>
-                      <SelectItem value="nursing">{t("log.nursing")}</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
+                  onValueChange={setFeedType}
+                  options={[
+                    { value: "formula", label: t("log.formula") },
+                    { value: "expressed", label: t("log.expressed") },
+                    { value: "nursing", label: t("log.nursing") },
+                  ]}
+                />
               </div>
               <LogDateTimeFields
                 idPrefix="feed"
@@ -689,9 +670,9 @@ export function LogPanel({ onLogged }: LogPanelProps) {
             </form>
           )}
         </LogSection>
-      </TabsContent>
+        )}
 
-      <TabsContent value="sleep" className="mt-0 flex-none">
+        {type === "sleep" && (
         <LogSection title={t("log.sleep")}>
             {activeSleepId ? (
               <>
@@ -739,11 +720,24 @@ export function LogPanel({ onLogged }: LogPanelProps) {
               </Button>
             )}
         </LogSection>
-      </TabsContent>
+        )}
 
-      <TabsContent value="diaper" className="mt-0 flex-none">
+        {type === "diaper" && (
         <LogSection title={t("log.diaper")}>
             <form onSubmit={handleDiaper} className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label>{t("common.type")}</Label>
+                <SegmentedControl
+                  value={diaperType}
+                  onValueChange={setDiaperType}
+                  options={[
+                    { value: "wet", label: t("log.wet") },
+                    { value: "dirty", label: t("log.dirty") },
+                    { value: "mixed", label: t("log.mixed") },
+                    { value: "dry", label: t("log.dry") },
+                  ]}
+                />
+              </div>
               <LogDateTimeFields
                 idPrefix="diaper"
                 date={logDate}
@@ -751,25 +745,6 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                 onDateChange={setLogDate}
                 onTimeChange={setLogTime}
               />
-              <div className="flex flex-col gap-2">
-                <Label>{t("common.type")}</Label>
-                <Select
-                  value={diaperType}
-                  onValueChange={(v) => setDiaperType(v as DiaperType)}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectGroup>
-                      <SelectItem value="wet">{t("log.wet")}</SelectItem>
-                      <SelectItem value="dirty">{t("log.dirty")}</SelectItem>
-                      <SelectItem value="mixed">{t("log.mixed")}</SelectItem>
-                      <SelectItem value="dry">{t("log.dry")}</SelectItem>
-                    </SelectGroup>
-                  </SelectContent>
-                </Select>
-              </div>
               <Button
                 type="submit"
                 variant="secondary"
@@ -780,9 +755,9 @@ export function LogPanel({ onLogged }: LogPanelProps) {
               </Button>
             </form>
         </LogSection>
-      </TabsContent>
+        )}
 
-      <TabsContent value="pump" className="mt-0 flex-none">
+        {type === "pump" && (
         <LogSection title={t("log.pumping")}>
             <form onSubmit={handlePump} className="flex flex-col gap-4">
               <LogDateTimeFields
@@ -834,32 +809,8 @@ export function LogPanel({ onLogged }: LogPanelProps) {
               </Button>
             </form>
         </LogSection>
-      </TabsContent>
-        </div>
-      </DrawerHandle>
-
-      <TabsList
-        data-vaul-no-drag=""
-        variant="line"
-        className="bg-background !h-auto w-full shrink-0 items-stretch justify-around gap-0 overflow-visible rounded-none border-0 p-0"
-      >
-        <TabsTrigger value="feed" className={LOG_TAB_CLASS}>
-          <MilkIcon aria-hidden className="size-5" />
-          {t("log.feed")}
-        </TabsTrigger>
-        <TabsTrigger value="sleep" className={LOG_TAB_CLASS}>
-          <MoonIcon aria-hidden className="size-5" />
-          {t("log.sleep")}
-        </TabsTrigger>
-        <TabsTrigger value="diaper" className={LOG_TAB_CLASS}>
-          <DropletsIcon aria-hidden className="size-5" />
-          {t("log.diaper")}
-        </TabsTrigger>
-        <TabsTrigger value="pump" className={LOG_TAB_CLASS}>
-          <PumpIcon aria-hidden className="size-5" />
-          {t("log.pump")}
-        </TabsTrigger>
-      </TabsList>
-    </Tabs>
+        )}
+      </AnimatedHeight>
+    </DrawerHandle>
   )
 }

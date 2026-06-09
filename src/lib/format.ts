@@ -1,3 +1,5 @@
+import i18n, { getDateLocale } from "@/lib/i18n"
+
 export function startOfDay(date = new Date()) {
   const d = new Date(date)
   d.setHours(0, 0, 0, 0)
@@ -25,8 +27,8 @@ export function addDays(date: Date, days: number) {
 }
 
 export function formatDayHeading(date: Date) {
-  if (isSameDay(date, new Date())) return "Today"
-  return date.toLocaleDateString([], {
+  if (isSameDay(date, new Date())) return i18n.t("common.today")
+  return date.toLocaleDateString(getDateLocale(), {
     weekday: "long",
     month: "short",
     day: "numeric",
@@ -34,7 +36,7 @@ export function formatDayHeading(date: Date) {
 }
 
 export function formatTime(iso: string) {
-  return new Date(iso).toLocaleTimeString([], {
+  return new Date(iso).toLocaleTimeString(getDateLocale(), {
     hour: "numeric",
     minute: "2-digit",
   })
@@ -44,8 +46,8 @@ export function formatDuration(minutes: number | null | undefined) {
   if (!minutes) return "—"
   const h = Math.floor(minutes / 60)
   const m = minutes % 60
-  if (h === 0) return `${m} min`
-  return `${h} hr ${m} min`
+  if (h === 0) return `${m} ${i18n.t("activity.min")}`
+  return `${h} ${i18n.t("activity.hr")} ${m} ${i18n.t("activity.min")}`
 }
 
 export function formatElapsedClock(totalSec: number) {

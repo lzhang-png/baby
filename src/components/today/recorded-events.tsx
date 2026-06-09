@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 import {
   DropletsIcon,
   EllipsisVerticalIcon,
@@ -116,6 +117,7 @@ type EventCardProps = {
 }
 
 function EventCard({ event, now, onEdit, onDelete }: EventCardProps) {
+  const { t } = useTranslation()
   const { item, displayAt, sleepPhase } = event
   const Icon = RECORDED_ICONS[item.kind]
   const editable =
@@ -152,7 +154,7 @@ function EventCard({ event, now, onEdit, onDelete }: EventCardProps) {
               type="button"
               variant="ghost"
               size="icon"
-              aria-label="Log options"
+              aria-label={t("log.logOptions")}
               className="text-muted-foreground shrink-0"
             >
               <EllipsisVerticalIcon className="size-4.5" />
@@ -163,14 +165,14 @@ function EventCard({ event, now, onEdit, onDelete }: EventCardProps) {
               className="min-h-12 px-3 py-3 text-base font-medium"
               onClick={() => onEdit(item)}
             >
-              Edit
+              {t("common.edit")}
             </DropdownMenuItem>
             <DropdownMenuItem
               variant="destructive"
               className="min-h-12 px-3 py-3 text-base font-medium"
               onClick={() => onDelete(item)}
             >
-              Delete
+              {t("common.delete")}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -180,18 +182,19 @@ function EventCard({ event, now, onEdit, onDelete }: EventCardProps) {
 }
 
 export function RecordedEvents({ events, loading, now }: RecordedEventsProps) {
+  const { t } = useTranslation()
   const { notifyActivityChanged } = useActivityRefresh()
   const [editingItem, setEditingItem] = useState<ActivityItem | null>(null)
 
   async function handleDelete(item: ActivityItem) {
-    if (!confirm("Delete this log? This cannot be undone.")) return
+    if (!confirm(t("log.deleteConfirm"))) return
 
     try {
       await deleteActivity(item)
-      toast.success("Log deleted")
+      toast.success(t("log.logDeleted"))
       notifyActivityChanged()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete log")
+      toast.error(err instanceof Error ? err.message : t("log.logDeleteFailed"))
     }
   }
 

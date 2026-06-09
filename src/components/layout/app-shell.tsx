@@ -1,4 +1,5 @@
 import { useState } from "react"
+import { useTranslation } from "react-i18next"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
 import {
   CalendarDaysIcon,
@@ -24,14 +25,14 @@ import { cn } from "@/lib/utils"
 
 type NavItem = {
   to: string
-  label: string
+  labelKey: "nav.timeline" | "nav.schedule" | "nav.family"
   icon: LucideIcon
 }
 
 const NAV: NavItem[] = [
-  { to: "/today", label: "Timeline", icon: CalendarDaysIcon },
-  { to: "/schedule", label: "Schedule", icon: ClipboardListIcon },
-  { to: "/family", label: "Family", icon: UsersIcon },
+  { to: "/today", labelKey: "nav.timeline", icon: CalendarDaysIcon },
+  { to: "/schedule", labelKey: "nav.schedule", icon: ClipboardListIcon },
+  { to: "/family", labelKey: "nav.family", icon: UsersIcon },
 ]
 
 const FAB_BOTTOM = "calc(1rem + env(safe-area-inset-bottom, 0px))"
@@ -42,6 +43,7 @@ function isNavItemActive(pathname: string, to: string) {
 }
 
 function NavMenuItem({ item }: { item: NavItem }) {
+  const { t } = useTranslation()
   const { pathname } = useLocation()
   const Icon = item.icon
   const isActive = isNavItemActive(pathname, item.to)
@@ -61,13 +63,14 @@ function NavMenuItem({ item }: { item: NavItem }) {
         className="flex w-full items-center gap-3"
       >
         <Icon aria-hidden />
-        {item.label}
+        {t(item.labelKey)}
       </NavLink>
     </DropdownMenuItem>
   )
 }
 
 export function AppShell() {
+  const { t } = useTranslation()
   const [logOpen, setLogOpen] = useState(false)
   const { pathname } = useLocation()
   const isTimelinePage = isNavItemActive(pathname, "/today")
@@ -95,7 +98,7 @@ export function AppShell() {
               <Button
                 size="icon"
                 variant="secondary"
-                aria-label="Open navigation menu"
+                aria-label={t("nav.openMenu")}
                 className={FAB_CLASS}
               >
                 <MenuIcon className="size-6" />
@@ -112,7 +115,7 @@ export function AppShell() {
 
           <Button
             size="icon"
-            aria-label="Log activity"
+            aria-label={t("nav.logActivity")}
             className={cn(
               FAB_CLASS,
               "bg-blue-500 text-white hover:bg-blue-600",

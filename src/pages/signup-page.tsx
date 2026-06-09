@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link, Navigate, useNavigate } from "react-router-dom"
 import { BabyIcon } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
 import { useAuth } from "@/contexts/auth-context"
@@ -18,6 +19,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export function SignupPage() {
+  const { t } = useTranslation()
   const { user, loading, signUp } = useAuth()
   const navigate = useNavigate()
   const [displayName, setDisplayName] = useState("")
@@ -29,7 +31,7 @@ export function SignupPage() {
   if (loading) {
     return (
       <div className="bg-background flex min-h-svh items-center justify-center">
-        <p className="text-muted-foreground text-sm">Loading…</p>
+        <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
       </div>
     )
   }
@@ -48,10 +50,10 @@ export function SignupPage() {
         displayName.trim(),
         inviteCode.trim() || undefined,
       )
-      toast.success("Account created")
+      toast.success(t("auth.accountCreated"))
       navigate("/today")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sign up failed")
+      toast.error(err instanceof Error ? err.message : t("auth.signUpFailed"))
     } finally {
       setSubmitting(false)
     }
@@ -64,30 +66,27 @@ export function SignupPage() {
           <span className="bg-primary/10 text-primary flex size-12 items-center justify-center rounded-xl">
             <BabyIcon className="size-6" />
           </span>
-          <h1 className="text-xl font-semibold tracking-tight">Join Luca's tracker</h1>
+          <h1 className="text-xl font-semibold tracking-tight">
+            {t("auth.joinTitle")}
+          </h1>
         </div>
 
         {!isSupabaseConfigured && (
           <Alert>
-            <AlertTitle>Supabase not configured</AlertTitle>
-            <AlertDescription>
-              Set up Supabase env vars before creating accounts.
-            </AlertDescription>
+            <AlertTitle>{t("auth.supabaseNotConfigured")}</AlertTitle>
+            <AlertDescription>{t("auth.supabaseSetupShort")}</AlertDescription>
           </Alert>
         )}
 
         <Card>
           <CardHeader>
-            <CardTitle>Create account</CardTitle>
-            <CardDescription>
-              First person: leave invite code blank to set up the family. Others:
-              enter the code from the Family page.
-            </CardDescription>
+            <CardTitle>{t("auth.createAccount")}</CardTitle>
+            <CardDescription>{t("auth.createAccountDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="name">Your name</Label>
+                <Label htmlFor="name">{t("auth.yourName")}</Label>
                 <Input
                   id="name"
                   required
@@ -96,7 +95,7 @@ export function SignupPage() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("common.email")}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -107,7 +106,7 @@ export function SignupPage() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("common.password")}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -119,25 +118,25 @@ export function SignupPage() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="invite">Family invite code (optional)</Label>
+                <Label htmlFor="invite">{t("auth.inviteCodeOptional")}</Label>
                 <Input
                   id="invite"
-                  placeholder="8-character code"
+                  placeholder={t("auth.inviteCodePlaceholder")}
                   value={inviteCode}
                   onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
                 />
               </div>
               <Button type="submit" disabled={submitting || !isSupabaseConfigured}>
-                {submitting ? "Creating…" : "Create account"}
+                {submitting ? t("auth.creating") : t("auth.createAccount")}
               </Button>
             </form>
           </CardContent>
         </Card>
 
         <p className="text-muted-foreground text-center text-sm">
-          Already have an account?{" "}
+          {t("auth.alreadyHaveAccount")}{" "}
           <Link to="/login" className="text-foreground underline-offset-4 hover:underline">
-            Sign in
+            {t("auth.signIn")}
           </Link>
         </p>
       </div>

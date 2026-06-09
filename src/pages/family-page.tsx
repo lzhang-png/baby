@@ -1,4 +1,5 @@
 import { CopyIcon, LogOutIcon } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
 import { useAuth } from "@/contexts/auth-context"
@@ -10,47 +11,80 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { type AppLocale, setAppLanguage } from "@/lib/i18n"
+
 export function FamilyPage() {
+  const { t, i18n } = useTranslation()
   const { user, household, signOut } = useAuth()
 
   function copyInvite() {
     if (!household?.invite_code) return
     navigator.clipboard.writeText(household.invite_code)
-    toast.success("Invite code copied")
+    toast.success(t("family.inviteCopied"))
+  }
+
+  function handleLanguageChange(value: string) {
+    setAppLanguage(value as AppLocale)
   }
 
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold tracking-tight">Family</h1>
-        <p className="text-muted-foreground text-sm">
-          Share the invite code so your partner or relatives can sign up and log
-          for Luca.
-        </p>
+        <h1 className="text-2xl font-semibold tracking-tight">
+          {t("family.title")}
+        </h1>
+        <p className="text-muted-foreground text-sm">{t("family.subtitle")}</p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Signed in as</CardTitle>
+          <CardTitle className="text-base">{t("common.language")}</CardTitle>
+          <CardDescription>{t("family.languageDescription")}</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Select value={i18n.language} onValueChange={handleLanguageChange}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectGroup>
+                <SelectItem value="zh">{t("common.chinese")}</SelectItem>
+                <SelectItem value="en">{t("common.english")}</SelectItem>
+              </SelectGroup>
+            </SelectContent>
+          </Select>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base">{t("family.signedInAs")}</CardTitle>
           <CardDescription>{user?.email}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
           <p className="text-sm">
-            Household: <span className="font-medium">{household?.name}</span>
+            {t("family.household")}:{" "}
+            <span className="font-medium">{household?.name}</span>
           </p>
           <Button variant="destructive" onClick={() => signOut()}>
             <LogOutIcon data-icon="inline-start" />
-            Sign out
+            {t("common.signOut")}
           </Button>
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">Invite code</CardTitle>
-          <CardDescription>
-            New members enter this on the sign-up page
-          </CardDescription>
+          <CardTitle className="text-base">{t("family.inviteCode")}</CardTitle>
+          <CardDescription>{t("family.inviteCodeDescription")}</CardDescription>
         </CardHeader>
         <CardContent className="flex flex-col gap-3">
           <p className="font-mono text-2xl font-semibold tracking-widest">
@@ -58,14 +92,12 @@ export function FamilyPage() {
           </p>
           <Button variant="outline" onClick={copyInvite}>
             <CopyIcon data-icon="inline-start" />
-            Copy code
+            {t("common.copyCode")}
           </Button>
           <div className="border-t pt-3">
-            <p className="text-sm font-medium">How to add family</p>
+            <p className="text-sm font-medium">{t("family.howToAdd")}</p>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              Send them the invite code. They go to Sign up, enter the code, and
-              they'll see the same logs and schedule. Each person uses their own
-              email and password.
+              {t("family.howToAddDescription")}
             </p>
           </div>
         </CardContent>

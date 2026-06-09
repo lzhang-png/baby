@@ -1,3 +1,4 @@
+import i18n from "@/lib/i18n"
 import {
   formatCompactDuration,
   formatDuration,
@@ -10,18 +11,16 @@ import {
   type SleepTimelinePhase,
 } from "@/lib/sleep-timeline"
 
-const FEED_LABELS: Record<string, string> = {
-  nursing: "Nursing",
-  formula: "Formula",
-  expressed: "Expressed",
-  donated: "Donated milk",
+function feedTypeLabel(type: string) {
+  const key = `log.${type}` as const
+  const translated = i18n.t(key)
+  return translated === key ? type : translated
 }
 
-const DIAPER_LABELS: Record<string, string> = {
-  wet: "Wet",
-  dirty: "Dirty",
-  mixed: "Mixed",
-  dry: "Dry",
+function diaperTypeLabel(type: string) {
+  const key = `log.${type}` as const
+  const translated = i18n.t(key)
+  return translated === key ? type : translated
 }
 
 type ActivityLabelOptions = {
@@ -36,9 +35,9 @@ export function activitySummary(
   switch (item.kind) {
     case "feed": {
       const f = item.data
-      const parts = [FEED_LABELS[f.feed_type] ?? f.feed_type]
+      const parts = [feedTypeLabel(f.feed_type)]
       if (f.amount_ml) parts.push(`${f.amount_ml} ml`)
-      if (f.duration_min) parts.push(`${f.duration_min} min`)
+      if (f.duration_min) parts.push(`${f.duration_min} ${i18n.t("activity.min")}`)
       if (f.side) parts.push(f.side)
       return parts.join(" · ")
     }
@@ -49,22 +48,28 @@ export function activitySummary(
       const phase = options?.sleepPhase
 
       if (phase === "start") {
-        return s.ended_at ? "Sleep started" : "Sleeping"
+        return s.ended_at
+          ? i18n.t("activity.sleepStarted")
+          : i18n.t("activity.sleeping")
       }
       if (phase === "end") {
         return s.ended_at
-          ? `Sleep ended · ${duration}`
-          : `Still sleeping · ${duration}`
+          ? i18n.t("activity.sleepEnded", { duration })
+          : i18n.t("activity.stillSleeping", { duration })
       }
 
-      if (!s.ended_at) return `Sleeping · ${duration}`
-      return `Slept ${formatDuration(s.duration_min)}`
+      if (!s.ended_at) {
+        return `${i18n.t("activity.sleeping")} · ${duration}`
+      }
+      return i18n.t("activity.slept", {
+        duration: formatDuration(s.duration_min),
+      })
     }
     case "diaper":
-      return `Diaper · ${DIAPER_LABELS[item.data.diaper_type]}`
+      return `${i18n.t("activity.diaper")} · ${diaperTypeLabel(item.data.diaper_type)}`
     case "pump": {
       const p = item.data
-      const parts = ["Pumping"]
+      const parts = [i18n.t("activity.pumping")]
       if (p.amount_ml) parts.push(`${p.amount_ml} ml`)
       if (p.duration_left_min || p.duration_right_min) {
         parts.push(`L${p.duration_left_min ?? 0}m R${p.duration_right_min ?? 0}m`)
@@ -85,13 +90,20 @@ export function getNursingDurationMinutes(feed: FeedLog, now: Date): number {
 }
 
 export function ongoingSleepLabel(sleep: SleepLog, now: Date): string {
-  return `Slept for ${formatCompactDuration(getSleepDurationMinutes(sleep, now))}`
+  return i18n.t("activity.sleptFor", {
+    duration: formatCompactDuration(getSleepDurationMinutes(sleep, now)),
+  })
 }
 
 export function ongoingNursingLabel(feed: FeedLog, now: Date): string {
-  const side =
-    feed.side === "L" ? "left" : feed.side === "R" ? "right" : "both sides"
-  return `Nursed on ${side} for ${formatCompactDuration(getNursingDurationMinutes(feed, now))}`
+  const duration = formatCompactDuration(getNursingDurationMinutes(feed, now))
+  if (feed.side === "L") {
+    return i18n.t("activity.nursedOnLeft", { duration })
+  }
+  if (feed.side === "R") {
+    return i18n.t("activity.nursedOnRight", { duration })
+  }
+  return i18n.t("activity.nursedOnBoth", { duration })
 }
 
 export type OngoingTimelineCard = {

@@ -11,6 +11,7 @@ import {
 import type { Session, User } from "@supabase/supabase-js"
 
 import { ensureHousehold, getBaby, getHousehold } from "@/lib/api/household"
+import i18n from "@/lib/i18n"
 import { isSupabaseConfigured, supabase } from "@/lib/supabase"
 import type { Baby, Household } from "@/lib/types"
 
@@ -170,9 +171,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       })
       if (error) throw error
       if (!data.session) {
-        throw new Error(
-          "Check your email to confirm your account, then sign in.",
-        )
+        throw new Error(i18n.t("auth.confirmEmail"))
       }
       await ensureHousehold(displayName, inviteCode)
       const result = await loadHouseholdData()

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useTranslation } from "react-i18next"
 import {
   BathIcon,
   MilkIcon,
@@ -161,11 +162,15 @@ export function DayTimelineSection({
   registerNowRef,
   registerDayStartRef,
 }: DayTimelineSectionProps) {
+  const { i18n } = useTranslation()
   const { version } = useActivityRefresh()
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  const stage = useMemo(() => getCurrentStage(date), [date])
+  const stage = useMemo(
+    () => getCurrentStage(date),
+    [date, i18n.language],
+  )
   const items = useMemo(() => getStageDayItems(stage), [stage])
   const layout = useMemo(() => getSpreadTimelineLayout(items), [items])
 
@@ -356,12 +361,12 @@ export function DayTimelineSection({
         <div
           ref={dayStartRef}
           className={cn(
-            "absolute left-0 z-10 grid -translate-y-1/2",
+            "absolute left-0 z-10 grid min-h-24 -translate-y-1/2 py-5",
             SCHEDULE_GRID,
           )}
           style={{ top: layout.midnightY, width: SCHEDULE_PANEL_WIDTH }}
         >
-          <div className="min-w-0 self-center pr-1 text-right">
+          <div className="min-w-0 self-center py-1 pr-1 text-right">
             <time
               dateTime={date.toISOString()}
               className={cn(

@@ -1,15 +1,20 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { ArrowDownIcon, ArrowUpIcon } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 import { DayTimelineSection } from "@/components/today/day-timeline-section"
 import { Button } from "@/components/ui/button"
 import { getNavigationDateBounds } from "@/lib/baby-tracker-import"
 import { addDays, isSameDay, startOfDay } from "@/lib/format"
+import i18n, { getDateLocale } from "@/lib/i18n"
 
 const INITIAL_PAST_DAYS = 2
 const INITIAL_FUTURE_DAYS = 2
 const LOAD_BATCH = 3
 const FAB_BOTTOM = "calc(1rem + env(safe-area-inset-bottom, 0px))"
+const DAY_SCROLL_ANCHOR_PX = 24
+const DAY_ACTIVE_ANCHOR_SCROLL_DOWN_PX = 24
+const DAY_ACTIVE_ANCHOR_SCROLL_UP_PX = 80
 const NOW_FAB_CLASS =
   "fixed left-4 z-[60] h-12 gap-1.5 rounded-full px-4 text-white shadow-lg hover:text-white [&_svg]:text-white"
 
@@ -85,35 +90,47 @@ function scrollToDayStart(
 ) {
   const scrollRect = scrollEl.getBoundingClientRect()
   const targetRect = target.getBoundingClientRect()
-  const topPadding = 12
   const top =
-    scrollEl.scrollTop + targetRect.top - scrollRect.top - topPadding
+    scrollEl.scrollTop +
+    targetRect.top -
+    scrollRect.top -
+    DAY_SCROLL_ANCHOR_PX
   scrollEl.scrollTo({ top: Math.max(0, top), behavior })
 }
 
 function shortDayLabel(date: Date, today: Date) {
-  if (isSameDay(date, today)) return "Today"
-  return date.toLocaleDateString([], { weekday: "short", day: "numeric" })
+  if (isSameDay(date, today)) return i18n.t("common.today")
+  return date.toLocaleDateString(getDateLocale(), {
+    weekday: "short",
+    day: "numeric",
+  })
 }
 
 function getActiveDayKey(
   scrollEl: HTMLDivElement,
   dayStartRefs: Map<string, HTMLDivElement>,
   navigationDays: Date[],
+  anchorPx: number,
 ) {
-  const anchorY = scrollEl.getBoundingClientRect().top + 12
+  const anchorY = scrollEl.getBoundingClientRect().top + anchorPx
   let activeKey: string | null = null
+  let containingKey: string | null = null
 
   for (const date of navigationDays) {
     const key = dateKey(date)
     const el = dayStartRefs.get(key)
     if (!el) continue
 
-    if (el.getBoundingClientRect().top <= anchorY) {
+    const rect = el.getBoundingClientRect()
+    if (rect.top <= anchorY && rect.bottom >= anchorY) {
+      containingKey = key
+    }
+    if (rect.top <= anchorY) {
       activeKey = key
     }
   }
 
+  if (containingKey) return containingKey
   if (activeKey) return activeKey
 
   for (const date of navigationDays) {
@@ -125,6 +142,7 @@ function getActiveDayKey(
 }
 
 export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
+  const { t } = useTranslation()
   const [now, setNow] = useState(() => new Date())
   const todayKey = dateKey(now)
   const today = useMemo(() => startOfDay(now), [todayKey])
@@ -146,6 +164,7 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
   const navigationDays = useMemo(() => buildAllNavigationDays(), [])
   const loadingMoreRef = useRef(false)
   const hasScrolledToTodayRef = useRef(false)
+  const lastScrollTopRef = useRef(0)
 
   useEffect(() => {
     const id = window.setInterval(() => setNow(new Date()), 60_000)
@@ -257,10 +276,19 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
     const scrollEl = scrollRef.current
     if (!scrollEl) return
 
+    const scrollTop = scrollEl.scrollTop
+    const scrollingUp = scrollTop < lastScrollTopRef.current
+    lastScrollTopRef.current = scrollTop
+
+    const anchorPx = scrollingUp
+      ? DAY_ACTIVE_ANCHOR_SCROLL_UP_PX
+      : DAY_ACTIVE_ANCHOR_SCROLL_DOWN_PX
+
     const nextKey = getActiveDayKey(
       scrollEl,
       dayStartRefs.current,
       navigationDays,
+      anchorPx,
     )
     setActiveDayKey((current) => (current === nextKey ? current : nextKey))
   }, [navigationDays])
@@ -439,7 +467,9 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
         <Button
           variant="secondary"
           aria-label={
-            nowOffset === "past" ? "Go down to now" : "Go up to now"
+            nowOffset === "past"
+              ? t("common.goDownToNow")
+              : t("common.goUpToNow")
           }
           className={NOW_FAB_CLASS}
           style={{ bottom: FAB_BOTTOM }}
@@ -450,7 +480,7 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
           ) : (
             <ArrowUpIcon className="size-5" aria-hidden />
           )}
-          Now
+          {t("common.now")}
         </Button>
       )}
     </section>

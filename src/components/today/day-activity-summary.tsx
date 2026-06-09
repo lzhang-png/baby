@@ -1,4 +1,5 @@
 import { useMemo, type CSSProperties } from "react"
+import { useTranslation } from "react-i18next"
 
 import {
   RECORDED_COLORS,
@@ -19,9 +20,10 @@ export function DayActivitySummary({
   className,
   style,
 }: DayActivitySummaryProps) {
+  const { i18n } = useTranslation()
   const segments = useMemo(
     () => buildDayActivitySummary(activities),
-    [activities],
+    [activities, i18n.language],
   )
 
   if (!segments?.length) return null

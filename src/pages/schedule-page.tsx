@@ -1,4 +1,5 @@
 import { InfoIcon, BabyIcon } from "lucide-react"
+import { useTranslation } from "react-i18next"
 
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
@@ -19,34 +20,8 @@ import {
 } from "@/components/ui/table"
 import { TrendCharts } from "@/components/trend-charts"
 import { StageTabs } from "@/components/stage-tabs"
-import { COMPARISON_ROWS, STAGES } from "@/lib/schedule-data"
+import { useLocalizedSchedule } from "@/lib/localized-schedule"
 import { useAuth } from "@/contexts/auth-context"
-
-const HERO_STATS = [
-  { value: "~10/day", label: "Feeds now (bottle + nursing)" },
-  { value: "90–110 ml", label: "Typical feed now" },
-  { value: "6h 53m", label: "Best night stretch (Jun 4)" },
-  { value: "~9:00 PM", label: "Current bedtime" },
-]
-
-const HABITS = [
-  {
-    title: "Feeding",
-    items: [
-      ["Full feeds, not snacks.", "Aim for bigger, well-spaced feeds so each meal counts — this is what stretched his night sleep."],
-      ["Cluster feed before bed.", "A solid evening feed (and an optional dream feed) tops him off for the long stretch."],
-      ["Daily cap ~900–1000 ml.", "Past ~4 months most calories still come from milk; don't push beyond comfort."],
-    ],
-  },
-  {
-    title: "Sleep",
-    items: [
-      ["Watch wake windows, not the clock.", "Putting him down before he's overtired prevents short, fussy naps."],
-      ["Same wind-down nightly.", "Dim lights, feed, sleep sack, down drowsy — repetition teaches self-settling."],
-      ["Day vs. night contrast.", "Bright and interactive by day, dark and boring at night, so the long stretch shifts into the night."],
-    ],
-  },
-]
 
 function HeroStat({ value, label }: { value: string; label: string }) {
   return (
@@ -58,7 +33,36 @@ function HeroStat({ value, label }: { value: string; label: string }) {
 }
 
 export function SchedulePage() {
+  const { t } = useTranslation()
   const { baby } = useAuth()
+  const { stages, comparisonRows } = useLocalizedSchedule()
+  const babyName = baby?.name ?? "Luca"
+
+  const heroStats = [
+    { value: "~10/day", label: t("schedule.heroFeeds") },
+    { value: "90–110 ml", label: t("schedule.heroFeedSize") },
+    { value: "6h 53m", label: t("schedule.heroNightStretch") },
+    { value: "~9:00 PM", label: t("schedule.heroBedtime") },
+  ]
+
+  const habits = [
+    {
+      title: t("schedule.habitFeeding"),
+      items: [
+        [t("schedule.habitFeed1Lead"), t("schedule.habitFeed1Rest")],
+        [t("schedule.habitFeed2Lead"), t("schedule.habitFeed2Rest")],
+        [t("schedule.habitFeed3Lead"), t("schedule.habitFeed3Rest")],
+      ],
+    },
+    {
+      title: t("schedule.habitSleep"),
+      items: [
+        [t("schedule.habitSleep1Lead"), t("schedule.habitSleep1Rest")],
+        [t("schedule.habitSleep2Lead"), t("schedule.habitSleep2Rest")],
+        [t("schedule.habitSleep3Lead"), t("schedule.habitSleep3Rest")],
+      ],
+    },
+  ]
 
   return (
     <div className="flex flex-col gap-8">
@@ -69,38 +73,35 @@ export function SchedulePage() {
               <BabyIcon className="size-5" />
             </span>
             <h1 className="text-2xl font-semibold tracking-tight">
-              {baby?.name ?? "Luca"}'s Feeding & Sleep Plan
+              {t("schedule.pageTitle", { name: babyName })}
             </h1>
           </div>
-          <Badge variant="secondary">Born Apr 21, 2026</Badge>
+          <Badge variant="secondary">{t("schedule.born")}</Badge>
         </div>
         <p className="text-muted-foreground max-w-3xl text-sm leading-relaxed">
-          A 3-month roadmap built from Luca's Baby Tracker logs. The schedule
-          follows the rhythm he's already showing and gently moves him toward
-          longer nights and fewer, bigger feeds.
+          {t("schedule.intro")}
         </p>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        {HERO_STATS.map((s) => (
+        {heroStats.map((s) => (
           <HeroStat key={s.label} {...s} />
         ))}
       </div>
 
       <Alert>
         <InfoIcon />
-        <AlertTitle>How to read this</AlertTitle>
-        <AlertDescription>
-          These targets are a flexible framework, not a rulebook. Feed on hunger
-          cues and follow his lead. Confirm volumes with your pediatrician.
-        </AlertDescription>
+        <AlertTitle>{t("schedule.howToRead")}</AlertTitle>
+        <AlertDescription>{t("schedule.howToReadDescription")}</AlertDescription>
       </Alert>
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-xl font-semibold tracking-tight">What Luca's logs show</h2>
+          <h2 className="text-xl font-semibold tracking-tight">
+            {t("schedule.trendsTitle")}
+          </h2>
           <p className="text-muted-foreground text-sm">
-            Historical trends from Apr 23 – Jun 6 (imported from Baby Tracker).
+            {t("schedule.trendsSubtitle")}
           </p>
         </div>
         <TrendCharts />
@@ -110,14 +111,14 @@ export function SchedulePage() {
 
       <section className="flex flex-col gap-4">
         <h2 className="text-xl font-semibold tracking-tight">
-          The 3-month schedule at a glance
+          {t("schedule.glanceTitle")}
         </h2>
         <div className="overflow-hidden rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-44">Metric</TableHead>
-                {STAGES.map((s) => (
+                <TableHead className="w-44">{t("schedule.metric")}</TableHead>
+                {stages.map((s) => (
                   <TableHead key={s.id}>
                     {s.tab} · {s.dates}
                   </TableHead>
@@ -125,10 +126,10 @@ export function SchedulePage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {COMPARISON_ROWS.map((row) => (
+              {comparisonRows.map((row) => (
                 <TableRow key={row.label}>
                   <TableCell className="font-medium">{row.label}</TableCell>
-                  {STAGES.map((s) => (
+                  {stages.map((s) => (
                     <TableCell key={s.id} className="text-muted-foreground">
                       {row.get(s)}
                     </TableCell>
@@ -142,9 +143,11 @@ export function SchedulePage() {
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-xl font-semibold tracking-tight">Sample day by stage</h2>
+          <h2 className="text-xl font-semibold tracking-tight">
+            {t("schedule.sampleDayTitle")}
+          </h2>
           <p className="text-muted-foreground text-sm">
-            Anchor every day to a fixed ~7:00 AM wake.
+            {t("schedule.sampleDaySubtitle")}
           </p>
         </div>
         <StageTabs />
@@ -154,10 +157,10 @@ export function SchedulePage() {
 
       <section className="flex flex-col gap-4">
         <h2 className="text-xl font-semibold tracking-tight">
-          Habits that carry across all 3 months
+          {t("schedule.habitsTitle")}
         </h2>
         <div className="grid gap-4 md:grid-cols-2">
-          {HABITS.map((group) => (
+          {habits.map((group) => (
             <Card key={group.title}>
               <CardHeader>
                 <CardTitle className="text-base">{group.title}</CardTitle>

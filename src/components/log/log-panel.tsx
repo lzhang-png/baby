@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react"
 import { DropletsIcon, MilkIcon, MoonIcon } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
 import { PumpIcon } from "@/components/icons/pump-icon"
@@ -131,6 +132,7 @@ function NursingSideRow({
   onResume: () => void
   disabled?: boolean
 }) {
+  const { t } = useTranslation()
   const isRunning = state.status === "running"
   const isPaused = state.status === "paused"
 
@@ -155,7 +157,7 @@ function NursingSideRow({
           onClick={onStart}
           disabled={disabled}
         >
-          Start
+          {t("common.start")}
         </Button>
       ) : isRunning ? (
         <Button
@@ -164,7 +166,7 @@ function NursingSideRow({
           onClick={onPause}
           disabled={disabled}
         >
-          Pause
+          {t("common.pause")}
         </Button>
       ) : (
         <Button
@@ -173,7 +175,7 @@ function NursingSideRow({
           onClick={onResume}
           disabled={disabled}
         >
-          Resume
+          {t("common.resume")}
         </Button>
       )}
     </div>
@@ -186,8 +188,8 @@ function LogDateTimeFields({
   time,
   onDateChange,
   onTimeChange,
-  dateLabel = "Date",
-  timeLabel = "Time",
+  dateLabel,
+  timeLabel,
 }: {
   idPrefix: string
   date: string
@@ -197,10 +199,14 @@ function LogDateTimeFields({
   dateLabel?: string
   timeLabel?: string
 }) {
+  const { t } = useTranslation()
+  const resolvedDateLabel = dateLabel ?? t("common.date")
+  const resolvedTimeLabel = timeLabel ?? t("common.time")
+
   return (
     <div className="grid gap-4 sm:grid-cols-2">
       <div className="flex flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-date`}>{dateLabel}</Label>
+        <Label htmlFor={`${idPrefix}-date`}>{resolvedDateLabel}</Label>
         <Input
           id={`${idPrefix}-date`}
           type="date"
@@ -209,7 +215,7 @@ function LogDateTimeFields({
         />
       </div>
       <div className="flex flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-time`}>{timeLabel}</Label>
+        <Label htmlFor={`${idPrefix}-time`}>{resolvedTimeLabel}</Label>
         <Input
           id={`${idPrefix}-time`}
           type="time"
@@ -222,9 +228,10 @@ function LogDateTimeFields({
 }
 
 function ElapsedTimer({ elapsedSec }: { elapsedSec: number }) {
+  const { t } = useTranslation()
   return (
     <div className="flex flex-col items-center gap-1 py-2">
-      <p className="text-muted-foreground text-xs font-medium">Elapsed</p>
+      <p className="text-muted-foreground text-xs font-medium">{t("log.elapsed")}</p>
       <p className="font-heading text-3xl font-semibold tabular-nums">
         {formatElapsedClock(elapsedSec)}
       </p>
@@ -248,6 +255,7 @@ function LogSection({
 }
 
 export function LogPanel({ onLogged }: LogPanelProps) {
+  const { t } = useTranslation()
   const { notifyActivityChanged } = useActivityRefresh()
   const { user, baby } = useAuth()
   const [logDate, setLogDate] = useState(toDateInputValue)
@@ -367,10 +375,10 @@ export function LogPanel({ onLogged }: LogPanelProps) {
         feedType,
         amountMl: Number(amountMl) || undefined,
       })
-      toast.success("Feed logged")
+      toast.success(t("log.feedLogged"))
       afterSuccess()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to log feed")
+      toast.error(err instanceof Error ? err.message : t("log.feedLogFailed"))
     } finally {
       setSubmitting(false)
     }
@@ -398,11 +406,13 @@ export function LogPanel({ onLogged }: LogPanelProps) {
           feedId: log.id,
         },
       }))
-      toast.success(`${sideKey === "L" ? "Left" : "Right"} side started`)
+      toast.success(
+        sideKey === "L" ? t("log.leftSideStarted") : t("log.rightSideStarted"),
+      )
       notifyActivityChanged()
       onLogged?.()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to start side")
+      toast.error(err instanceof Error ? err.message : t("log.startSideFailed"))
     } finally {
       setSubmitting(false)
     }
@@ -435,7 +445,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
         isSideStarted(pausedSides[sideKey]),
       )
       if (startedSides.length === 0) {
-        throw new Error("Start at least one side before saving")
+        throw new Error(t("log.startOneSide"))
       }
 
       await Promise.all(
@@ -454,11 +464,13 @@ export function LogPanel({ onLogged }: LogPanelProps) {
 
       setNursingSides(INITIAL_NURSING_SIDES)
       toast.success(
-        startedSides.length === 2 ? "Both sides saved" : "Nursing saved",
+        startedSides.length === 2
+          ? t("log.bothSidesSaved")
+          : t("log.nursingSaved"),
       )
       afterSuccess()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to save nursing")
+      toast.error(err instanceof Error ? err.message : t("log.nursingSaveFailed"))
     } finally {
       setSubmitting(false)
     }
@@ -475,10 +487,10 @@ export function LogPanel({ onLogged }: LogPanelProps) {
       })
       setActiveSleepId(log.id)
       setSleepStartedAt(log.started_at)
-      toast.success("Sleep started")
+      toast.success(t("log.sleepStarted"))
       afterSuccess()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to start sleep")
+      toast.error(err instanceof Error ? err.message : t("log.sleepStartFailed"))
     } finally {
       setSubmitting(false)
     }
@@ -497,10 +509,10 @@ export function LogPanel({ onLogged }: LogPanelProps) {
       await endSleep(sleepId, occurredAt())
       setActiveSleepId(null)
       setSleepStartedAt(null)
-      toast.success("Sleep ended")
+      toast.success(t("log.sleepEnded"))
       afterSuccess()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to end sleep")
+      toast.error(err instanceof Error ? err.message : t("log.sleepEndFailed"))
     } finally {
       setSubmitting(false)
     }
@@ -517,10 +529,10 @@ export function LogPanel({ onLogged }: LogPanelProps) {
         occurredAt: occurredAt(),
         diaperType,
       })
-      toast.success("Diaper logged")
+      toast.success(t("log.diaperLogged"))
       afterSuccess()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to log diaper")
+      toast.error(err instanceof Error ? err.message : t("log.diaperLogFailed"))
     } finally {
       setSubmitting(false)
     }
@@ -539,10 +551,10 @@ export function LogPanel({ onLogged }: LogPanelProps) {
         durationLeftMin: Number(pumpLeft) || undefined,
         durationRightMin: Number(pumpRight) || undefined,
       })
-      toast.success("Pump logged")
+      toast.success(t("log.pumpLogged"))
       afterSuccess()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to log pump")
+      toast.error(err instanceof Error ? err.message : t("log.pumpLogFailed"))
     } finally {
       setSubmitting(false)
     }
@@ -554,11 +566,11 @@ export function LogPanel({ onLogged }: LogPanelProps) {
     <Tabs defaultValue="feed" className="flex min-h-0 flex-1 flex-col gap-0">
       <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-6">
       <TabsContent value="feed" className="mt-0">
-        <LogSection title="Feeding">
+        <LogSection title={t("log.feeding")}>
           {feedType === "nursing" ? (
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Type</Label>
+                <Label>{t("common.type")}</Label>
                 <Select
                   value={feedType}
                   onValueChange={(v) => setFeedType(v as FeedType)}
@@ -569,18 +581,18 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="formula">Formula</SelectItem>
-                      <SelectItem value="expressed">Expressed</SelectItem>
-                      <SelectItem value="nursing">Nursing</SelectItem>
+                      <SelectItem value="formula">{t("log.formula")}</SelectItem>
+                      <SelectItem value="expressed">{t("log.expressed")}</SelectItem>
+                      <SelectItem value="nursing">{t("log.nursing")}</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
               </div>
               <div className="flex flex-col gap-2">
-                <Label>Sides</Label>
+                <Label>{t("log.sides")}</Label>
                 <div className="flex flex-col gap-2">
                   <NursingSideRow
-                    label="Left"
+                    label={t("common.left")}
                     state={nursingSides.L}
                     elapsedSec={getSideElapsedSec(nursingSides.L)}
                     onStart={() => startNursingSide("L")}
@@ -589,7 +601,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                     disabled={submitting}
                   />
                   <NursingSideRow
-                    label="Right"
+                    label={t("common.right")}
                     state={nursingSides.R}
                     elapsedSec={getSideElapsedSec(nursingSides.R)}
                     onStart={() => startNursingSide("R")}
@@ -606,8 +618,8 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                   time={logTime}
                   onDateChange={setLogDate}
                   onTimeChange={setLogTime}
-                  dateLabel="End date"
-                  timeLabel="End time"
+                  dateLabel={t("log.endDate")}
+                  timeLabel={t("log.endTime")}
                 />
               )}
               {isNursingActive && (
@@ -618,14 +630,14 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                   onClick={handleNursingSaveAll}
                   disabled={submitting}
                 >
-                  Stop and save
+                  {t("log.stopAndSave")}
                 </Button>
               )}
             </div>
           ) : (
             <form onSubmit={handleFeed} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <Label>Type</Label>
+                <Label>{t("common.type")}</Label>
                 <Select
                   value={feedType}
                   onValueChange={(v) => setFeedType(v as FeedType)}
@@ -635,9 +647,9 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="formula">Formula</SelectItem>
-                      <SelectItem value="expressed">Expressed</SelectItem>
-                      <SelectItem value="nursing">Nursing</SelectItem>
+                      <SelectItem value="formula">{t("log.formula")}</SelectItem>
+                      <SelectItem value="expressed">{t("log.expressed")}</SelectItem>
+                      <SelectItem value="nursing">{t("log.nursing")}</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -650,7 +662,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                 onTimeChange={setLogTime}
               />
               <div className="flex flex-col gap-2">
-                <Label htmlFor="amount">Amount (ml)</Label>
+                <Label htmlFor="amount">{t("log.amountMl")}</Label>
                 <Input
                   id="amount"
                   type="number"
@@ -665,7 +677,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                 className={LOG_SUBMIT_CLASS}
                 disabled={submitting}
               >
-                Log feed
+                {t("log.logFeed")}
               </Button>
             </form>
           )}
@@ -673,7 +685,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
       </TabsContent>
 
       <TabsContent value="sleep" className="mt-0">
-        <LogSection title="Sleep">
+        <LogSection title={t("log.sleep")}>
             {activeSleepId ? (
               <>
                 <ElapsedTimer elapsedSec={sleepElapsedSec} />
@@ -683,8 +695,8 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                   time={logTime}
                   onDateChange={setLogDate}
                   onTimeChange={setLogTime}
-                  dateLabel="End date"
-                  timeLabel="End time"
+                  dateLabel={t("log.endDate")}
+                  timeLabel={t("log.endTime")}
                 />
               </>
             ) : (
@@ -694,8 +706,8 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                 time={logTime}
                 onDateChange={setLogDate}
                 onTimeChange={setLogTime}
-                dateLabel="Start date"
-                timeLabel="Start time"
+                dateLabel={t("log.startDate")}
+                timeLabel={t("log.startTime")}
               />
             )}
             {activeSleepId ? (
@@ -706,7 +718,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                 onClick={handleSleepEnd}
                 disabled={submitting}
               >
-                End sleep
+                {t("log.endSleep")}
               </Button>
             ) : (
               <Button
@@ -716,14 +728,14 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                 onClick={handleSleepStart}
                 disabled={submitting}
               >
-                Start sleeping
+                {t("log.startSleeping")}
               </Button>
             )}
         </LogSection>
       </TabsContent>
 
       <TabsContent value="diaper" className="mt-0">
-        <LogSection title="Diaper">
+        <LogSection title={t("log.diaper")}>
             <form onSubmit={handleDiaper} className="flex flex-col gap-4">
               <LogDateTimeFields
                 idPrefix="diaper"
@@ -733,7 +745,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                 onTimeChange={setLogTime}
               />
               <div className="flex flex-col gap-2">
-                <Label>Type</Label>
+                <Label>{t("common.type")}</Label>
                 <Select
                   value={diaperType}
                   onValueChange={(v) => setDiaperType(v as DiaperType)}
@@ -743,10 +755,10 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      <SelectItem value="wet">Wet</SelectItem>
-                      <SelectItem value="dirty">Dirty</SelectItem>
-                      <SelectItem value="mixed">Mixed</SelectItem>
-                      <SelectItem value="dry">Dry</SelectItem>
+                      <SelectItem value="wet">{t("log.wet")}</SelectItem>
+                      <SelectItem value="dirty">{t("log.dirty")}</SelectItem>
+                      <SelectItem value="mixed">{t("log.mixed")}</SelectItem>
+                      <SelectItem value="dry">{t("log.dry")}</SelectItem>
                     </SelectGroup>
                   </SelectContent>
                 </Select>
@@ -757,14 +769,14 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                 className={LOG_SUBMIT_CLASS}
                 disabled={submitting}
               >
-                Log diaper
+                {t("log.logDiaper")}
               </Button>
             </form>
         </LogSection>
       </TabsContent>
 
       <TabsContent value="pump" className="mt-0">
-        <LogSection title="Pumping">
+        <LogSection title={t("log.pumping")}>
             <form onSubmit={handlePump} className="flex flex-col gap-4">
               <LogDateTimeFields
                 idPrefix="pump"
@@ -774,7 +786,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                 onTimeChange={setLogTime}
               />
               <div className="flex flex-col gap-2">
-                <Label htmlFor="pump-ml">Amount (ml, optional)</Label>
+                <Label htmlFor="pump-ml">{t("log.amountMlOptional")}</Label>
                 <Input
                   id="pump-ml"
                   type="number"
@@ -785,7 +797,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
               </div>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="pump-l">Left (min)</Label>
+                  <Label htmlFor="pump-l">{t("log.leftMin")}</Label>
                   <Input
                     id="pump-l"
                     type="number"
@@ -795,7 +807,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="pump-r">Right (min)</Label>
+                  <Label htmlFor="pump-r">{t("log.rightMin")}</Label>
                   <Input
                     id="pump-r"
                     type="number"
@@ -811,7 +823,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                 className={LOG_SUBMIT_CLASS}
                 disabled={submitting}
               >
-                Log pump
+                {t("log.logPump")}
               </Button>
             </form>
         </LogSection>
@@ -824,19 +836,19 @@ export function LogPanel({ onLogged }: LogPanelProps) {
       >
         <TabsTrigger value="feed" className={LOG_TAB_CLASS}>
           <MilkIcon aria-hidden className="size-5" />
-          Feed
+          {t("log.feed")}
         </TabsTrigger>
         <TabsTrigger value="sleep" className={LOG_TAB_CLASS}>
           <MoonIcon aria-hidden className="size-5" />
-          Sleep
+          {t("log.sleep")}
         </TabsTrigger>
         <TabsTrigger value="diaper" className={LOG_TAB_CLASS}>
           <DropletsIcon aria-hidden className="size-5" />
-          Diaper
+          {t("log.diaper")}
         </TabsTrigger>
         <TabsTrigger value="pump" className={LOG_TAB_CLASS}>
           <PumpIcon aria-hidden className="size-5" />
-          Pump
+          {t("log.pump")}
         </TabsTrigger>
       </TabsList>
     </Tabs>

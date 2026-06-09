@@ -1,4 +1,6 @@
-import { STAGES, type Stage } from "@/lib/schedule-data"
+import i18n from "@/lib/i18n"
+import { getStages } from "@/lib/localized-schedule"
+import type { Stage } from "@/lib/schedule-data"
 
 export const DAY_MINUTES = 24 * 60
 
@@ -57,6 +59,10 @@ export function getNowNormalizedMinutes(now = new Date()): number {
 }
 
 function parseShortDate(value: string, year: number): Date {
+  if (value.includes("/")) {
+    const [month, day] = value.split("/").map((part) => Number(part.trim()))
+    return new Date(year, month - 1, day)
+  }
   const [month, day] = value.trim().split(/\s+/)
   return new Date(year, MONTHS[month], Number(day))
 }
@@ -70,14 +76,16 @@ function parseStageDateRange(dates: string, year = 2026) {
 }
 
 export function getCurrentStage(now = new Date()): Stage {
-  for (const stage of STAGES) {
+  const stages = getStages(i18n.language)
+
+  for (const stage of stages) {
     const { start, end } = parseStageDateRange(stage.dates)
     if (now >= start && now <= end) return stage
   }
 
-  const firstStart = parseStageDateRange(STAGES[0].dates).start
-  if (now < firstStart) return STAGES[0]
-  return STAGES[STAGES.length - 1]
+  const firstStart = parseStageDateRange(stages[0].dates).start
+  if (now < firstStart) return stages[0]
+  return stages[stages.length - 1]
 }
 
 export function getStageDayItems(stage: Stage): ScheduleTimelineItem[] {

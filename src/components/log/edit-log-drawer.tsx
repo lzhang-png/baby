@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
 import {
@@ -42,20 +43,21 @@ type EditLogDrawerProps = {
   onSaved: () => void
 }
 
-const KIND_LABELS: Record<ActivityItem["kind"], string> = {
-  feed: "Feed",
-  sleep: "Sleep",
-  diaper: "Diaper",
-  pump: "Pump",
-}
-
 export function EditLogDrawer({
   item,
   open,
   onOpenChange,
   onSaved,
 }: EditLogDrawerProps) {
+  const { t } = useTranslation()
   const [submitting, setSubmitting] = useState(false)
+
+  const kindLabels: Record<ActivityItem["kind"], string> = {
+    feed: t("log.editFeed"),
+    sleep: t("log.editSleep"),
+    diaper: t("log.editDiaper"),
+    pump: t("log.editPump"),
+  }
   const [when, setWhen] = useState("")
   const [endWhen, setEndWhen] = useState("")
   const [notes, setNotes] = useState("")
@@ -149,11 +151,11 @@ export function EditLogDrawer({
           break
       }
 
-      toast.success("Log updated")
+      toast.success(t("log.logUpdated"))
       onOpenChange(false)
       onSaved()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update log")
+      toast.error(err instanceof Error ? err.message : t("log.logUpdateFailed"))
     } finally {
       setSubmitting(false)
     }
@@ -161,16 +163,16 @@ export function EditLogDrawer({
 
   async function handleDelete() {
     if (!item) return
-    if (!confirm("Delete this log? This cannot be undone.")) return
+    if (!confirm(t("log.deleteConfirm"))) return
 
     setSubmitting(true)
     try {
       await deleteActivity(item)
-      toast.success("Log deleted")
+      toast.success(t("log.logDeleted"))
       onOpenChange(false)
       onSaved()
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to delete log")
+      toast.error(err instanceof Error ? err.message : t("log.logDeleteFailed"))
     } finally {
       setSubmitting(false)
     }
@@ -181,7 +183,7 @@ export function EditLogDrawer({
       <DrawerContent className="flex max-h-[88vh] flex-col bg-background">
         <DrawerHeader>
           <DrawerTitle>
-            Edit {item ? KIND_LABELS[item.kind] : "log"}
+            {item ? kindLabels[item.kind] : t("log.editLog")}
           </DrawerTitle>
         </DrawerHeader>
 
@@ -193,7 +195,7 @@ export function EditLogDrawer({
             {item.kind === "feed" && (
               <>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-when">Time</Label>
+                  <Label htmlFor="edit-when">{t("common.time")}</Label>
                   <Input
                     id="edit-when"
                     type="datetime-local"
@@ -202,7 +204,7 @@ export function EditLogDrawer({
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label>Type</Label>
+                  <Label>{t("common.type")}</Label>
                   <Select
                     value={feedType}
                     onValueChange={(v) => setFeedType(v as FeedType)}
@@ -212,10 +214,10 @@ export function EditLogDrawer({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
-                        <SelectItem value="nursing">Nursing</SelectItem>
-                        <SelectItem value="formula">Formula</SelectItem>
-                        <SelectItem value="expressed">Expressed</SelectItem>
-                        <SelectItem value="donated">Donated milk</SelectItem>
+                        <SelectItem value="nursing">{t("log.nursing")}</SelectItem>
+                        <SelectItem value="formula">{t("log.formula")}</SelectItem>
+                        <SelectItem value="expressed">{t("log.expressed")}</SelectItem>
+                        <SelectItem value="donated">{t("log.donated")}</SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -223,7 +225,7 @@ export function EditLogDrawer({
                 {feedType === "nursing" ? (
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="flex flex-col gap-2">
-                      <Label htmlFor="edit-duration">Duration (min)</Label>
+                      <Label htmlFor="edit-duration">{t("log.durationMin")}</Label>
                       <Input
                         id="edit-duration"
                         type="number"
@@ -233,7 +235,7 @@ export function EditLogDrawer({
                       />
                     </div>
                     <div className="flex flex-col gap-2">
-                      <Label>Side</Label>
+                      <Label>{t("log.side")}</Label>
                       <Select
                         value={side}
                         onValueChange={(v) => setSide(v as NursingSide)}
@@ -243,9 +245,9 @@ export function EditLogDrawer({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectGroup>
-                            <SelectItem value="L">Left</SelectItem>
-                            <SelectItem value="R">Right</SelectItem>
-                            <SelectItem value="both">Both</SelectItem>
+                            <SelectItem value="L">{t("common.left")}</SelectItem>
+                            <SelectItem value="R">{t("common.right")}</SelectItem>
+                            <SelectItem value="both">{t("common.both")}</SelectItem>
                           </SelectGroup>
                         </SelectContent>
                       </Select>
@@ -253,7 +255,7 @@ export function EditLogDrawer({
                   </div>
                 ) : (
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="edit-amount">Amount (ml)</Label>
+                    <Label htmlFor="edit-amount">{t("log.amountMl")}</Label>
                     <Input
                       id="edit-amount"
                       type="number"
@@ -269,7 +271,7 @@ export function EditLogDrawer({
             {item.kind === "sleep" && (
               <>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-sleep-start">Start time</Label>
+                  <Label htmlFor="edit-sleep-start">{t("log.startTimeLabel")}</Label>
                   <Input
                     id="edit-sleep-start"
                     type="datetime-local"
@@ -278,7 +280,7 @@ export function EditLogDrawer({
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-sleep-end">End time (optional)</Label>
+                  <Label htmlFor="edit-sleep-end">{t("log.endTimeOptional")}</Label>
                   <Input
                     id="edit-sleep-end"
                     type="datetime-local"
@@ -292,7 +294,7 @@ export function EditLogDrawer({
             {item.kind === "diaper" && (
               <>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-diaper-when">Time</Label>
+                  <Label htmlFor="edit-diaper-when">{t("common.time")}</Label>
                   <Input
                     id="edit-diaper-when"
                     type="datetime-local"
@@ -301,7 +303,7 @@ export function EditLogDrawer({
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label>Type</Label>
+                  <Label>{t("common.type")}</Label>
                   <Select
                     value={diaperType}
                     onValueChange={(v) => setDiaperType(v as DiaperType)}
@@ -311,10 +313,10 @@ export function EditLogDrawer({
                     </SelectTrigger>
                     <SelectContent>
                       <SelectGroup>
-                        <SelectItem value="wet">Wet</SelectItem>
-                        <SelectItem value="dirty">Dirty</SelectItem>
-                        <SelectItem value="mixed">Mixed</SelectItem>
-                        <SelectItem value="dry">Dry</SelectItem>
+                      <SelectItem value="wet">{t("log.wet")}</SelectItem>
+                      <SelectItem value="dirty">{t("log.dirty")}</SelectItem>
+                      <SelectItem value="mixed">{t("log.mixed")}</SelectItem>
+                      <SelectItem value="dry">{t("log.dry")}</SelectItem>
                       </SelectGroup>
                     </SelectContent>
                   </Select>
@@ -325,7 +327,7 @@ export function EditLogDrawer({
             {item.kind === "pump" && (
               <>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-pump-when">Time</Label>
+                  <Label htmlFor="edit-pump-when">{t("common.time")}</Label>
                   <Input
                     id="edit-pump-when"
                     type="datetime-local"
@@ -334,7 +336,7 @@ export function EditLogDrawer({
                   />
                 </div>
                 <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-pump-ml">Amount (ml, optional)</Label>
+                  <Label htmlFor="edit-pump-ml">{t("log.amountMlOptional")}</Label>
                   <Input
                     id="edit-pump-ml"
                     type="number"
@@ -345,7 +347,7 @@ export function EditLogDrawer({
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="edit-pump-l">Left (min)</Label>
+                    <Label htmlFor="edit-pump-l">{t("log.leftMin")}</Label>
                     <Input
                       id="edit-pump-l"
                       type="number"
@@ -355,7 +357,7 @@ export function EditLogDrawer({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label htmlFor="edit-pump-r">Right (min)</Label>
+                    <Label htmlFor="edit-pump-r">{t("log.rightMin")}</Label>
                     <Input
                       id="edit-pump-r"
                       type="number"
@@ -369,7 +371,7 @@ export function EditLogDrawer({
             )}
 
             <div className="flex flex-col gap-2">
-              <Label htmlFor="edit-notes">Notes</Label>
+              <Label htmlFor="edit-notes">{t("common.notes")}</Label>
               <Textarea
                 id="edit-notes"
                 value={notes}
@@ -380,7 +382,7 @@ export function EditLogDrawer({
 
             <DrawerFooter className="px-0">
               <Button type="submit" disabled={submitting}>
-                Save changes
+                {t("common.saveChanges")}
               </Button>
               <Button
                 type="button"
@@ -388,7 +390,7 @@ export function EditLogDrawer({
                 disabled={submitting}
                 onClick={handleDelete}
               >
-                Delete log
+                {t("log.deleteLog")}
               </Button>
             </DrawerFooter>
           </form>

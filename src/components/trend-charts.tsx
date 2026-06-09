@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 
 import {
@@ -13,19 +14,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart"
-import { TRENDS } from "@/lib/schedule-data"
-
-const nightConfig = {
-  nightStretch: { label: "Longest stretch", color: "var(--chart-2)" },
-} satisfies ChartConfig
-
-const feedConfig = {
-  feedSize: { label: "Feed size", color: "var(--chart-1)" },
-} satisfies ChartConfig
-
-const bottleConfig = {
-  bottleMl: { label: "Bottle ml/day", color: "var(--chart-4)" },
-} satisfies ChartConfig
+import { useLocalizedSchedule } from "@/lib/localized-schedule"
 
 function TrendCard({
   title,
@@ -35,6 +24,7 @@ function TrendCard({
   config,
   suffix,
   domain,
+  data,
   allowDecimals = false,
 }: {
   title: string
@@ -44,6 +34,7 @@ function TrendCard({
   config: ChartConfig
   suffix: string
   domain: [number, number]
+  data: Array<{ week: string; nightStretch: number; bottleMl: number; feedSize: number }>
   allowDecimals?: boolean
 }) {
   return (
@@ -57,7 +48,7 @@ function TrendCard({
       </CardHeader>
       <CardContent>
         <ChartContainer config={config} className="h-[200px] w-full">
-          <AreaChart data={TRENDS} margin={{ left: 4, right: 12, top: 8 }}>
+          <AreaChart data={data} margin={{ left: 4, right: 12, top: 8 }}>
             <CartesianGrid vertical={false} />
             <XAxis
               dataKey="week"
@@ -97,34 +88,55 @@ function TrendCard({
 }
 
 export function TrendCharts() {
+  const { t } = useTranslation()
+  const { trends } = useLocalizedSchedule()
+
+  const nightConfig = {
+    nightStretch: {
+      label: t("schedule.chartLongestStretch"),
+      color: "var(--chart-2)",
+    },
+  } satisfies ChartConfig
+
+  const feedConfig = {
+    feedSize: { label: t("schedule.chartFeedSize"), color: "var(--chart-1)" },
+  } satisfies ChartConfig
+
+  const bottleConfig = {
+    bottleMl: { label: t("schedule.chartBottleMl"), color: "var(--chart-4)" },
+  } satisfies ChartConfig
+
   return (
     <div className="grid gap-4 md:grid-cols-3">
       <TrendCard
-        title="Longest night sleep stretch"
-        unit="hours"
-        description="Weekly avg of the single longest overnight stretch. Source: Baby Tracker, Apr 23–Jun 6."
+        title={t("schedule.trendNightTitle")}
+        unit={t("schedule.trendNightUnit")}
+        description={t("schedule.trendNightDesc")}
         dataKey="nightStretch"
         config={nightConfig}
         suffix=" h"
         domain={[0, 6]}
+        data={trends}
       />
       <TrendCard
-        title="Typical largest single feed"
-        unit="ml"
-        description="Biggest bottle that week — appetite roughly doubled. Source: Baby Tracker."
+        title={t("schedule.trendFeedTitle")}
+        unit={t("schedule.trendFeedUnit")}
+        description={t("schedule.trendFeedDesc")}
         dataKey="feedSize"
         config={feedConfig}
         suffix=" ml"
         domain={[0, 120]}
+        data={trends}
       />
       <TrendCard
-        title="Measured bottle intake"
-        unit="ml/day"
-        description="Bottles only. The late dip reflects more direct nursing (unmeasured), so total intake held steady."
+        title={t("schedule.trendBottleTitle")}
+        unit={t("schedule.trendBottleUnit")}
+        description={t("schedule.trendBottleDesc")}
         dataKey="bottleMl"
         config={bottleConfig}
         suffix=" ml"
         domain={[0, 600]}
+        data={trends}
       />
     </div>
   )

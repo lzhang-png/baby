@@ -1,3 +1,4 @@
+import i18n from "@/lib/i18n"
 import type { ActivityItem } from "@/lib/types"
 
 export type DaySummarySegment = {
@@ -11,10 +12,6 @@ function formatShortDuration(minutes: number) {
   if (h === 0) return `${m}m`
   if (m === 0) return `${h}h`
   return `${h}h ${m}m`
-}
-
-function plural(count: number, singular: string) {
-  return `${count} ${singular}${count === 1 ? "" : "s"}`
 }
 
 export function buildDayActivitySummary(
@@ -51,30 +48,31 @@ export function buildDayActivitySummary(
   const segments: DaySummarySegment[] = []
 
   if (feeds > 0) {
+    const feedText = i18n.t("summary.feed", { count: feeds })
     segments.push({
       kind: "feed",
-      text:
-        feedMl > 0
-          ? `${plural(feeds, "feed")} · ${feedMl} ml`
-          : plural(feeds, "feed"),
+      text: feedMl > 0 ? `${feedText} · ${feedMl} ml` : feedText,
     })
   }
   if (diapers > 0) {
-    segments.push({ kind: "diaper", text: plural(diapers, "diaper") })
+    segments.push({
+      kind: "diaper",
+      text: i18n.t("summary.diaper", { count: diapers }),
+    })
   }
   if (pumps > 0) {
+    const pumpText = i18n.t("summary.pump", { count: pumps })
     segments.push({
       kind: "pump",
-      text:
-        pumpMl > 0
-          ? `${plural(pumps, "pump")} · ${pumpMl} ml`
-          : plural(pumps, "pump"),
+      text: pumpMl > 0 ? `${pumpText} · ${pumpMl} ml` : pumpText,
     })
   }
   if (sleepMin > 0) {
     segments.push({
       kind: "sleep",
-      text: `${formatShortDuration(sleepMin)} sleep`,
+      text: i18n.t("summary.sleep", {
+        duration: formatShortDuration(sleepMin),
+      }),
     })
   }
 

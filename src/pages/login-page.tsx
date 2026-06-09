@@ -1,6 +1,7 @@
 import { useState } from "react"
 import { Link, Navigate, useNavigate } from "react-router-dom"
 import { BabyIcon } from "lucide-react"
+import { useTranslation } from "react-i18next"
 import { toast } from "sonner"
 
 import { useAuth } from "@/contexts/auth-context"
@@ -18,6 +19,7 @@ import { Label } from "@/components/ui/label"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 
 export function LoginPage() {
+  const { t } = useTranslation()
   const { user, loading, signIn } = useAuth()
   const navigate = useNavigate()
   const [email, setEmail] = useState("")
@@ -27,7 +29,7 @@ export function LoginPage() {
   if (loading) {
     return (
       <div className="bg-background flex min-h-svh items-center justify-center">
-        <p className="text-muted-foreground text-sm">Loading…</p>
+        <p className="text-muted-foreground text-sm">{t("common.loading")}</p>
       </div>
     )
   }
@@ -41,10 +43,10 @@ export function LoginPage() {
     setSubmitting(true)
     try {
       await signIn(email.trim(), password)
-      toast.success("Welcome back")
+      toast.success(t("auth.welcomeBack"))
       navigate("/today")
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Sign in failed")
+      toast.error(err instanceof Error ? err.message : t("auth.signInFailed"))
     } finally {
       setSubmitting(false)
     }
@@ -57,15 +59,17 @@ export function LoginPage() {
           <span className="bg-primary/10 text-primary flex size-12 items-center justify-center rounded-xl">
             <BabyIcon className="size-6" />
           </span>
-          <h1 className="text-xl font-semibold tracking-tight">Luca's tracker</h1>
+          <h1 className="text-xl font-semibold tracking-tight">
+            {t("auth.trackerTitle")}
+          </h1>
           <p className="text-muted-foreground text-sm">
-            Family login — feeding, sleep, diapers & pumping
+            {t("auth.loginSubtitle")}
           </p>
         </div>
 
         {!isSupabaseConfigured && (
           <Alert>
-            <AlertTitle>Supabase not configured</AlertTitle>
+            <AlertTitle>{t("auth.supabaseNotConfigured")}</AlertTitle>
             <AlertDescription>
               Copy <code className="text-xs">.env.example</code> to{" "}
               <code className="text-xs">.env.local</code>, add your Supabase URL
@@ -77,13 +81,13 @@ export function LoginPage() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Sign in</CardTitle>
-            <CardDescription>Email and password for family members</CardDescription>
+            <CardTitle>{t("auth.signIn")}</CardTitle>
+            <CardDescription>{t("auth.signInDescription")}</CardDescription>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">{t("common.email")}</Label>
                 <Input
                   id="email"
                   type="email"
@@ -94,7 +98,7 @@ export function LoginPage() {
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t("common.password")}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -105,16 +109,16 @@ export function LoginPage() {
                 />
               </div>
               <Button type="submit" disabled={submitting || !isSupabaseConfigured}>
-                {submitting ? "Signing in…" : "Sign in"}
+                {submitting ? t("auth.signingIn") : t("auth.signIn")}
               </Button>
             </form>
           </CardContent>
         </Card>
 
         <p className="text-muted-foreground text-center text-sm">
-          New family member?{" "}
+          {t("auth.newMember")}{" "}
           <Link to="/signup" className="text-foreground underline-offset-4 hover:underline">
-            Create account
+            {t("auth.createAccount")}
           </Link>
         </p>
       </div>

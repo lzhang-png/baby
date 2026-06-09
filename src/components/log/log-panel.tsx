@@ -204,22 +204,24 @@ function LogDateTimeFields({
   const resolvedTimeLabel = timeLabel ?? t("common.time")
 
   return (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <div className="flex flex-col gap-2">
+    <div className="grid min-w-0 grid-cols-1 gap-4">
+      <div className="flex min-w-0 flex-col gap-2">
         <Label htmlFor={`${idPrefix}-date`}>{resolvedDateLabel}</Label>
         <Input
           id={`${idPrefix}-date`}
           type="date"
           value={date}
+          className="w-full min-w-0"
           onChange={(e) => onDateChange(e.target.value)}
         />
       </div>
-      <div className="flex flex-col gap-2">
+      <div className="flex min-w-0 flex-col gap-2">
         <Label htmlFor={`${idPrefix}-time`}>{resolvedTimeLabel}</Label>
         <Input
           id={`${idPrefix}-time`}
           type="time"
           value={time}
+          className="w-full min-w-0"
           onChange={(e) => onTimeChange(e.target.value)}
         />
       </div>
@@ -563,8 +565,8 @@ export function LogPanel({ onLogged }: LogPanelProps) {
   void nursingTick
 
   return (
-    <Tabs defaultValue="feed" className="flex min-h-0 flex-1 flex-col gap-0">
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-3 pb-6">
+    <Tabs defaultValue="feed" className="flex min-h-0 min-w-0 flex-1 flex-col gap-0">
+      <div className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto px-4 pt-3 pb-6">
       <TabsContent value="feed" className="mt-0">
         <LogSection title={t("log.feeding")}>
           {feedType === "nursing" ? (
@@ -795,8 +797,8 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                   onChange={(e) => setPumpMl(e.target.value)}
                 />
               </div>
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div className="flex flex-col gap-2">
+              <div className="grid min-w-0 grid-cols-2 gap-3">
+                <div className="flex min-w-0 flex-col gap-2">
                   <Label htmlFor="pump-l">{t("log.leftMin")}</Label>
                   <Input
                     id="pump-l"
@@ -806,7 +808,7 @@ export function LogPanel({ onLogged }: LogPanelProps) {
                     onChange={(e) => setPumpLeft(e.target.value)}
                   />
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex min-w-0 flex-col gap-2">
                   <Label htmlFor="pump-r">{t("log.rightMin")}</Label>
                   <Input
                     id="pump-r"

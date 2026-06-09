@@ -139,6 +139,16 @@
   html[data-text-size="large"] {
     font-size: 112.5%;
     }
+
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    display: block;
+    width: 100%;
+    min-width: 0;
+    max-width: 100%;
+    -webkit-min-logical-width: 0;
+    }
 }
 
 @keyframes ongoing-card-pulse {

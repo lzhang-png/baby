@@ -175,8 +175,8 @@ export function AppShell() {
       <BottomFabBar logOpen={logOpen} onLogOpen={() => setLogOpen(true)} />
 
       <Drawer open={logOpen} onOpenChange={setLogOpen} direction="bottom">
-        <DrawerContent className="flex max-h-[88vh] flex-col bg-background pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
-          <div className="flex min-h-0 flex-1 flex-col">
+        <DrawerContent className="flex max-h-[88vh] min-w-0 flex-col overflow-x-hidden bg-background pb-[calc(2rem+env(safe-area-inset-bottom,0px))]">
+          <div className="flex min-h-0 min-w-0 flex-1 flex-col">
             <LogPanel onLogged={() => setLogOpen(false)} />
           </div>
         </DrawerContent>

@@ -347,6 +347,18 @@ export function DayTimelineSection({
     cardLeftX: 0,
     cardWidth: 0,
   })
+  const [measuredCardHeights, setMeasuredCardHeights] = useState<
+    Record<string, number>
+  >({})
+  const handleCardHeightChange = useCallback(
+    (id: string, heightPx: number) => {
+      setMeasuredCardHeights((current) => {
+        if (current[id] === heightPx) return current
+        return { ...current, [id]: heightPx }
+      })
+    },
+    [],
+  )
   const textSizeVersion = useTextSizeVersion()
 
   const isToday = isSameDay(date, now)
@@ -490,26 +502,32 @@ export function DayTimelineSection({
           : "sans-serif"
       const cardWidth = connectorMetrics.cardWidth
 
+      // Prefer real rendered heights; fall back to a text-wrap estimate until
+      // the card has been measured.
       const itemHeights = [
-        ...placed.map((event) =>
-          estimateRecordedCardHeightPx(
-            activitySummary(event.item, {
-              sleepPhase: event.sleepPhase,
-              now,
-            }),
-            cardWidth,
-            isRecordedEventEditable(event.item, event.sleepPhase),
-            fontFamily,
-          ),
+        ...placed.map(
+          (event) =>
+            measuredCardHeights[event.id] ??
+            estimateRecordedCardHeightPx(
+              activitySummary(event.item, {
+                sleepPhase: event.sleepPhase,
+                now,
+              }),
+              cardWidth,
+              isRecordedEventEditable(event.item, event.sleepPhase),
+              fontFamily,
+            ),
         ),
         ...(nowAnchorY != null
-          ? ongoing.map((card) =>
-              estimateRecordedCardHeightPx(
-                ongoingTimelineLabel(card.item, now),
-                cardWidth,
-                false,
-                fontFamily,
-              ),
+          ? ongoing.map(
+              (card) =>
+                measuredCardHeights[card.id] ??
+                estimateRecordedCardHeightPx(
+                  ongoingTimelineLabel(card.item, now),
+                  cardWidth,
+                  false,
+                  fontFamily,
+                ),
             )
           : []),
       ]
@@ -544,6 +562,7 @@ export function DayTimelineSection({
       layout,
       textSizeVersion,
       connectorMetrics.cardWidth,
+      measuredCardHeights,
     ])
 
   useEffect(() => {
@@ -769,11 +788,17 @@ export function DayTimelineSection({
             >
               <DayActivitySummary activities={activities} />
             </div>
-            <RecordedEvents events={recordedEvents} loading={loading} now={now} />
+            <RecordedEvents
+              events={recordedEvents}
+              loading={loading}
+              now={now}
+              onCardHeightChange={handleCardHeightChange}
+            />
             <OngoingNowCards
               cards={ongoingTimelineCards}
               labelYs={ongoingCardLabelYs}
               now={now}
+              onCardHeightChange={handleCardHeightChange}
             />
           </div>
         </div>

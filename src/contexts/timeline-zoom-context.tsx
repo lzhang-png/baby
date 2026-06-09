@@ -43,6 +43,9 @@ type PinchState = {
   startPx: number
   startScroll: number
   anchorOffset: number
+  targetPx: number
+  /** False once fingers lift; the animation settles to targetPx then stops. */
+  active: boolean
 }
 
 function getTouchDistance(touches: TouchList) {
@@ -51,6 +54,9 @@ function getTouchDistance(touches: TouchList) {
     touches[0].clientY - touches[1].clientY,
   )
 }
+
+/** Per-frame approach factor toward the pinch target (0..1). */
+const PINCH_SMOOTHING = 0.35
 
 export function TimelineZoomProvider({ children }: { children: ReactNode }) {
   const [pxPerMinute, setPxPerMinute] = useState(loadTimelineZoom)
@@ -71,6 +77,57 @@ export function TimelineZoomProvider({ children }: { children: ReactNode }) {
     scrollRef.current = el
     if (!el) return
 
+    const pinchFrameRef = { current: null as number | null }
+
+    const stopPinchAnimation = () => {
+      if (pinchFrameRef.current !== null) {
+        cancelAnimationFrame(pinchFrameRef.current)
+        pinchFrameRef.current = null
+      }
+    }
+
+    const applyPinchValue = (pinch: PinchState, value: number) => {
+      pxPerMinuteRef.current = value
+      flushSync(() => setPxPerMinute(value))
+      el.scrollTop = getZoomScrollTop(
+        pinch.startScroll,
+        pinch.anchorOffset,
+        value / pinch.startPx,
+      )
+    }
+
+    const pinchTick = () => {
+      const pinch = pinchRef.current
+      if (!pinch) {
+        pinchFrameRef.current = null
+        return
+      }
+
+      const current = pxPerMinuteRef.current
+      const delta = pinch.targetPx - current
+      const next =
+        Math.abs(delta) < 0.001
+          ? pinch.targetPx
+          : current + delta * PINCH_SMOOTHING
+
+      if (next !== current) applyPinchValue(pinch, next)
+
+      if (!pinch.active && next === pinch.targetPx) {
+        pinchRef.current = null
+        pinchFrameRef.current = null
+        saveTimelineZoom(pinch.targetPx)
+        return
+      }
+
+      pinchFrameRef.current = requestAnimationFrame(pinchTick)
+    }
+
+    const startPinchAnimation = () => {
+      if (pinchFrameRef.current === null) {
+        pinchFrameRef.current = requestAnimationFrame(pinchTick)
+      }
+    }
+
     const onTouchStart = (event: TouchEvent) => {
       if (event.touches.length !== 2) return
 
@@ -78,6 +135,7 @@ export function TimelineZoomProvider({ children }: { children: ReactNode }) {
         cancelAnimationFrame(zoomFrameRef.current)
         zoomFrameRef.current = null
       }
+      stopPinchAnimation()
 
       const midY = (event.touches[0].clientY + event.touches[1].clientY) / 2
       pinchRef.current = {
@@ -85,6 +143,8 @@ export function TimelineZoomProvider({ children }: { children: ReactNode }) {
         startPx: pxPerMinuteRef.current,
         startScroll: el.scrollTop,
         anchorOffset: midY - el.getBoundingClientRect().top,
+        targetPx: pxPerMinuteRef.current,
+        active: true,
       }
     }
 
@@ -95,22 +155,25 @@ export function TimelineZoomProvider({ children }: { children: ReactNode }) {
       event.preventDefault()
 
       const scale = getTouchDistance(event.touches) / pinch.startDistance
-      const next = clampPxPerMinute(pinch.startPx * scale)
-      if (next === pxPerMinuteRef.current) return
+      pinch.targetPx = clampPxPerMinute(pinch.startPx * scale)
 
-      pxPerMinuteRef.current = next
-      flushSync(() => setPxPerMinute(next))
-      el.scrollTop = getZoomScrollTop(
-        pinch.startScroll,
-        pinch.anchorOffset,
-        next / pinch.startPx,
-      )
+      if (prefersReducedMotion()) {
+        applyPinchValue(pinch, pinch.targetPx)
+        return
+      }
+
+      startPinchAnimation()
     }
 
     const onTouchEnd = (event: TouchEvent) => {
-      if (!pinchRef.current || event.touches.length >= 2) return
-      pinchRef.current = null
-      saveTimelineZoom(pxPerMinuteRef.current)
+      const pinch = pinchRef.current
+      if (!pinch || event.touches.length >= 2) return
+
+      pinch.active = false
+      if (prefersReducedMotion() || pinchFrameRef.current === null) {
+        pinchRef.current = null
+        saveTimelineZoom(pxPerMinuteRef.current)
+      }
     }
 
     el.addEventListener("touchstart", onTouchStart, { passive: true })
@@ -119,6 +182,7 @@ export function TimelineZoomProvider({ children }: { children: ReactNode }) {
     el.addEventListener("touchcancel", onTouchEnd)
 
     detachPinchRef.current = () => {
+      stopPinchAnimation()
       el.removeEventListener("touchstart", onTouchStart)
       el.removeEventListener("touchmove", onTouchMove)
       el.removeEventListener("touchend", onTouchEnd)

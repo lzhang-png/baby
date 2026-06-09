@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react"
+import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import {
   BlendIcon,
@@ -142,10 +142,35 @@ export type PlacedActivity = {
   sleepPhase?: SleepTimelinePhase
 }
 
+export type CardHeightChangeHandler = (id: string, heightPx: number) => void
+
+/** Reports the element's rendered height so card spacing can use real sizes. */
+function useCardHeightReport(
+  id: string,
+  onHeightChange?: CardHeightChangeHandler,
+) {
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const el = ref.current
+    if (!el || !onHeightChange) return
+
+    const observer = new ResizeObserver(() => {
+      onHeightChange(id, el.offsetHeight)
+    })
+    observer.observe(el)
+
+    return () => observer.disconnect()
+  }, [id, onHeightChange])
+
+  return ref
+}
+
 type RecordedEventsProps = {
   events: PlacedActivity[]
   loading?: boolean
   now: Date
+  onCardHeightChange?: CardHeightChangeHandler
 }
 
 type EventCardProps = {
@@ -153,11 +178,13 @@ type EventCardProps = {
   now: Date
   onEdit: (item: ActivityItem) => void
   onDelete: (item: ActivityItem) => void
+  onHeightChange?: CardHeightChangeHandler
 }
 
-function EventCard({ event, now, onEdit, onDelete }: EventCardProps) {
+function EventCard({ event, now, onEdit, onDelete, onHeightChange }: EventCardProps) {
   const { t } = useTranslation()
   const { item, displayAt, sleepPhase } = event
+  const cardRef = useCardHeightReport(event.id, onHeightChange)
   const Icon = getRecordedIcon(item, sleepPhase)
   const editable =
     isEditableActivity(item) &&
@@ -169,6 +196,7 @@ function EventCard({ event, now, onEdit, onDelete }: EventCardProps) {
 
   return (
     <div
+      ref={cardRef}
       className={cn(
         "bg-card flex w-full items-start gap-2 rounded-lg p-2 shadow-sm",
         EVENT_CARD_MAX_WIDTH,
@@ -223,7 +251,12 @@ function EventCard({ event, now, onEdit, onDelete }: EventCardProps) {
   )
 }
 
-export function RecordedEvents({ events, loading, now }: RecordedEventsProps) {
+export function RecordedEvents({
+  events,
+  loading,
+  now,
+  onCardHeightChange,
+}: RecordedEventsProps) {
   const { t } = useTranslation()
   const { notifyActivityChanged } = useActivityRefresh()
   const [editingItem, setEditingItem] = useState<ActivityItem | null>(null)
@@ -257,6 +290,7 @@ export function RecordedEvents({ events, loading, now }: RecordedEventsProps) {
             now={now}
             onEdit={setEditingItem}
             onDelete={handleDelete}
+            onHeightChange={onCardHeightChange}
           />
         </div>
       ))}
@@ -280,9 +314,55 @@ type OngoingNowCardsProps = {
   cards: OngoingTimelineCard[]
   labelYs: number[]
   now: Date
+  onCardHeightChange?: CardHeightChangeHandler
 }
 
-export function OngoingNowCards({ cards, labelYs, now }: OngoingNowCardsProps) {
+function OngoingNowCard({
+  card,
+  labelY,
+  liveNow,
+  onHeightChange,
+}: {
+  card: OngoingTimelineCard
+  labelY: number
+  liveNow: Date
+  onHeightChange?: CardHeightChangeHandler
+}) {
+  const cardRef = useCardHeightReport(card.id, onHeightChange)
+  const Icon = getRecordedIcon(card.item)
+
+  return (
+    <div
+      className="absolute right-0 left-6 z-[25] -translate-y-1/2"
+      style={{ top: labelY }}
+    >
+      <div
+        ref={cardRef}
+        className={cn(
+          "ongoing-card-pulse flex w-full items-center gap-2 rounded-lg p-2 shadow-sm",
+          EVENT_CARD_MAX_WIDTH,
+        )}
+      >
+        <Icon
+          aria-hidden
+          className={cn("size-3.5 shrink-0", RECORDED_COLORS[card.item.kind])}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-card-foreground text-xs leading-snug">
+            {ongoingTimelineLabel(card.item, liveNow)}
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+export function OngoingNowCards({
+  cards,
+  labelYs,
+  now,
+  onCardHeightChange,
+}: OngoingNowCardsProps) {
   const [liveNow, setLiveNow] = useState(now)
 
   useEffect(() => {
@@ -299,36 +379,15 @@ export function OngoingNowCards({ cards, labelYs, now }: OngoingNowCardsProps) {
 
   return (
     <>
-      {cards.map((card, index) => {
-        const Icon = getRecordedIcon(card.item)
-        return (
-          <div
-            key={card.id}
-            className="absolute right-0 left-6 z-[25] -translate-y-1/2"
-            style={{ top: labelYs[index] }}
-          >
-            <div
-              className={cn(
-                "ongoing-card-pulse flex w-full items-center gap-2 rounded-lg p-2 shadow-sm",
-                EVENT_CARD_MAX_WIDTH,
-              )}
-            >
-              <Icon
-                aria-hidden
-                className={cn(
-                  "size-3.5 shrink-0",
-                  RECORDED_COLORS[card.item.kind],
-                )}
-              />
-              <div className="min-w-0 flex-1">
-                <p className="text-card-foreground text-xs leading-snug">
-                  {ongoingTimelineLabel(card.item, liveNow)}
-                </p>
-              </div>
-            </div>
-          </div>
-        )
-      })}
+      {cards.map((card, index) => (
+        <OngoingNowCard
+          key={card.id}
+          card={card}
+          labelY={labelYs[index]}
+          liveNow={liveNow}
+          onHeightChange={onCardHeightChange}
+        />
+      ))}
     </>
   )
 }

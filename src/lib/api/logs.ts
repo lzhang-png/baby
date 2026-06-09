@@ -1,4 +1,4 @@
-import { endOfDay, startOfDay } from "@/lib/format"
+import { endOfDay, isSameDay, startOfDay } from "@/lib/format"
 import { supabase } from "@/lib/supabase"
 import type {
   ActivityItem,
@@ -230,19 +230,25 @@ async function fetchActivityLogPools(
 function buildActivitiesForDay(
   pools: ActivityLogPools,
   date: Date,
+  now = new Date(),
 ): ActivityItem[] {
   const since = startOfDay(date).toISOString()
   const until = endOfDay(date).toISOString()
   const sinceMs = new Date(since).getTime()
   const untilMs = new Date(until).getTime()
+  const isToday = isSameDay(date, now)
+  const isFutureDay = startOfDay(date) > startOfDay(now)
 
   const feedMap = new Map<string, FeedLog>()
   for (const row of pools.feeds) {
     const atMs = new Date(row.occurred_at).getTime()
     if (atMs >= sinceMs && atMs <= untilMs) feedMap.set(row.id, row)
   }
-  for (const row of pools.spanningFeeds) {
-    if (new Date(row.occurred_at).getTime() < sinceMs) feedMap.set(row.id, row)
+  // Active nursing carries to today only (for the ongoing card), never future days.
+  if (isToday) {
+    for (const row of pools.spanningFeeds) {
+      if (new Date(row.occurred_at).getTime() < sinceMs) feedMap.set(row.id, row)
+    }
   }
 
   const sleepMap = new Map<string, SleepLog>()
@@ -250,8 +256,10 @@ function buildActivitiesForDay(
     const atMs = new Date(row.started_at).getTime()
     if (atMs >= sinceMs && atMs <= untilMs) sleepMap.set(row.id, row)
   }
-  for (const row of pools.activeSleeps) {
-    sleepMap.set(row.id, row)
+  if (!isFutureDay) {
+    for (const row of pools.activeSleeps) {
+      sleepMap.set(row.id, row)
+    }
   }
   for (const row of pools.spanningEndedSleeps) {
     const startedMs = new Date(row.started_at).getTime()

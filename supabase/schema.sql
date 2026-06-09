@@ -317,6 +317,11 @@ create policy "Members delete pumps"
 -- ---------------------------------------------------------------------------
 -- Realtime: push log changes to all household devices
 -- ---------------------------------------------------------------------------
+alter table public.feed_logs replica identity full;
+alter table public.sleep_logs replica identity full;
+alter table public.diaper_logs replica identity full;
+alter table public.pump_logs replica identity full;
+
 alter publication supabase_realtime add table public.feed_logs;
 alter publication supabase_realtime add table public.sleep_logs;
 alter publication supabase_realtime add table public.diaper_logs;

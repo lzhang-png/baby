@@ -146,7 +146,8 @@ export async function getActivitiesForDay(
   const since = startOfDay(date).toISOString()
   const until = endOfDay(date).toISOString()
 
-  const [feeds, sleeps, diapers, pumps] = await Promise.all([
+  const [feeds, spanningFeeds, sleeps, activeSleeps, spanningEndedSleeps, diapers, pumps] =
+    await Promise.all([
     supabase
       .from("feed_logs")
       .select("*")
@@ -155,12 +156,31 @@ export async function getActivitiesForDay(
       .lte("occurred_at", until)
       .order("occurred_at", { ascending: false }),
     supabase
+      .from("feed_logs")
+      .select("*")
+      .eq("baby_id", babyId)
+      .eq("feed_type", "nursing")
+      .is("duration_min", null)
+      .lt("occurred_at", since),
+    supabase
       .from("sleep_logs")
       .select("*")
       .eq("baby_id", babyId)
       .gte("started_at", since)
       .lte("started_at", until)
       .order("started_at", { ascending: false }),
+    supabase
+      .from("sleep_logs")
+      .select("*")
+      .eq("baby_id", babyId)
+      .is("ended_at", null),
+    supabase
+      .from("sleep_logs")
+      .select("*")
+      .eq("baby_id", babyId)
+      .lt("started_at", since)
+      .not("ended_at", "is", null)
+      .gte("ended_at", since),
     supabase
       .from("diaper_logs")
       .select("*")
@@ -178,20 +198,37 @@ export async function getActivitiesForDay(
   ])
 
   if (feeds.error) throw feeds.error
+  if (spanningFeeds.error) throw spanningFeeds.error
   if (sleeps.error) throw sleeps.error
+  if (activeSleeps.error) throw activeSleeps.error
+  if (spanningEndedSleeps.error) throw spanningEndedSleeps.error
   if (diapers.error) throw diapers.error
   if (pumps.error) throw pumps.error
 
+  const feedMap = new Map<string, FeedLog>()
+  for (const row of [...(feeds.data ?? []), ...(spanningFeeds.data ?? [])]) {
+    feedMap.set(row.id, row as FeedLog)
+  }
+
+  const sleepMap = new Map<string, SleepLog>()
+  for (const row of [
+    ...(sleeps.data ?? []),
+    ...(activeSleeps.data ?? []),
+    ...(spanningEndedSleeps.data ?? []),
+  ]) {
+    sleepMap.set(row.id, row as SleepLog)
+  }
+
   const items: ActivityItem[] = [
-    ...(feeds.data ?? []).map((d) => ({
+    ...[...feedMap.values()].map((d) => ({
       kind: "feed" as const,
       at: d.occurred_at,
-      data: d as FeedLog,
+      data: d,
     })),
-    ...(sleeps.data ?? []).map((d) => ({
+    ...[...sleepMap.values()].map((d) => ({
       kind: "sleep" as const,
       at: d.started_at,
-      data: d as SleepLog,
+      data: d,
     })),
     ...(diapers.data ?? []).map((d) => ({
       kind: "diaper" as const,

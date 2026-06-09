@@ -17,7 +17,7 @@ const DAY_SCROLL_ANCHOR_PX = 24
 const DAY_ACTIVE_ANCHOR_SCROLL_DOWN_PX = 24
 const DAY_ACTIVE_ANCHOR_SCROLL_UP_PX = 80
 const NOW_FAB_CLASS =
-  "fixed left-4 z-[60] h-14 gap-1.5 rounded-full px-4 shadow-lg"
+  "fixed left-4 z-[60] h-14 gap-1.5 rounded-full px-4 shadow-lg max-[426px]:w-14 max-[426px]:justify-center max-[426px]:px-0"
 type NowScrollOffset = "at" | "past" | "future"
 
 type ScheduleTimelineProps = {
@@ -450,7 +450,10 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
         </div>
       </div>
 
-      <div ref={setScrollNode} className="min-h-0 flex-1 overflow-y-auto">
+      <div
+        ref={setScrollNode}
+        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto px-[2px]"
+      >
         <div ref={topSentinelRef} className="h-px shrink-0" aria-hidden />
 
         {days.map((date) => (
@@ -491,7 +494,7 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
           ) : (
             <ArrowUpIcon className="size-5" aria-hidden />
           )}
-          {t("common.now")}
+          <span className="max-[426px]:hidden">{t("common.now")}</span>
         </Button>
       )}
     </section>

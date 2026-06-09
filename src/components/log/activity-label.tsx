@@ -123,7 +123,7 @@ export function getOngoingTimelineCards(
   for (const item of activities) {
     if (item.kind === "sleep") {
       const sleep = item.data
-      if (!sleep.ended_at && isSameDay(new Date(sleep.started_at), date)) {
+      if (!sleep.ended_at) {
         cards.push({ id: `ongoing-sleep-${sleep.id}`, item })
       }
       continue
@@ -134,7 +134,6 @@ export function getOngoingTimelineCards(
       if (
         feed.feed_type === "nursing" &&
         feed.duration_min == null &&
-        isSameDay(new Date(feed.occurred_at), date) &&
         (feed.side === "L" || feed.side === "R")
       ) {
         cards.push({ id: `ongoing-nursing-${feed.id}`, item })

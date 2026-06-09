@@ -27,6 +27,7 @@ import {
 } from "@/lib/baby-tracker-import"
 import { formatDayHeading, isSameDay, startOfDay } from "@/lib/format"
 import { expandActivitiesForTimeline } from "@/lib/sleep-timeline"
+import { getScaledLogCardHeightPx, getScaledPx } from "@/lib/text-size"
 import type { ActivityItem } from "@/lib/types"
 import type { ActivityKind } from "@/lib/schedule-data"
 import {
@@ -193,6 +194,18 @@ export function DayTimelineSection({
     trunkX: 0,
     cardLeftX: 0,
   })
+  const [textSizeVersion, setTextSizeVersion] = useState(0)
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setTextSizeVersion((current) => current + 1)
+    })
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-text-size"],
+    })
+    return () => observer.disconnect()
+  }, [])
 
   const isToday = isSameDay(date, now)
   const isPastDay = startOfDay(date) < startOfDay(now)
@@ -265,8 +278,8 @@ export function DayTimelineSection({
 
       const labelYs = spreadLabelPositions(
         preferredYs,
-        DEFAULT_RECORDED_LABEL_EDGE_GAP_PX,
-        LOG_CARD_ESTIMATED_HEIGHT_PX,
+        getScaledPx(DEFAULT_RECORDED_LABEL_EDGE_GAP_PX),
+        getScaledLogCardHeightPx(LOG_CARD_ESTIMATED_HEIGHT_PX),
       )
 
       return {
@@ -279,7 +292,7 @@ export function DayTimelineSection({
           (_, index) => labelYs[placed.length + index],
         ),
       }
-    }, [activities, date, isToday, now, items, layout])
+    }, [activities, date, isToday, now, items, layout, textSizeVersion])
 
   useEffect(() => {
     function measure() {
@@ -308,7 +321,7 @@ export function DayTimelineSection({
     <section className="flex flex-col">
       <div
         ref={timelineRef}
-        className="relative px-1"
+        className="relative px-[2px]"
         style={{ height: layout.height }}
       >
         <RecordedEventConnectors

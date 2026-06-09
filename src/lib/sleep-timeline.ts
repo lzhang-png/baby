@@ -41,12 +41,14 @@ export function expandActivitiesForTimeline(
 
     const sleep = item.data
 
-    events.push({
-      item,
-      id: `sleep-${sleep.id}-start`,
-      at: sleep.started_at,
-      sleepPhase: "start",
-    })
+    if (isSameDay(new Date(sleep.started_at), date)) {
+      events.push({
+        item,
+        id: `sleep-${sleep.id}-start`,
+        at: sleep.started_at,
+        sleepPhase: "start",
+      })
+    }
 
     if (sleep.ended_at && isSameDay(new Date(sleep.ended_at), date)) {
       events.push({

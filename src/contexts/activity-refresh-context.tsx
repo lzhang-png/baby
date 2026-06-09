@@ -19,13 +19,20 @@ const ActivityRefreshContext =
   createContext<ActivityRefreshContextValue | null>(null)
 
 function ActivityRealtimeSync() {
-  const { baby } = useAuth()
+  const { baby, session } = useAuth()
   const { notifyActivityChanged } = useActivityRefresh()
 
   useEffect(() => {
-    if (!baby?.id) return
-    return subscribeToBabyActivityChanges(baby.id, notifyActivityChanged)
-  }, [baby?.id, notifyActivityChanged])
+    const babyId = baby?.id
+    const accessToken = session?.access_token
+    if (!babyId || !accessToken) return
+
+    return subscribeToBabyActivityChanges(
+      babyId,
+      accessToken,
+      notifyActivityChanged,
+    )
+  }, [baby?.id, session?.access_token, notifyActivityChanged])
 
   return null
 }

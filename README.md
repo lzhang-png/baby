@@ -58,7 +58,7 @@ npm install
 npm run dev
 ```
 
-Open http://localhost:5173/baby/
+Open http://localhost:5173/
 
 ## First account vs family members
 

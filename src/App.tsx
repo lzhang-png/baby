@@ -10,9 +10,11 @@ import { TodayPage } from "@/pages/today-page"
 import { SchedulePage } from "@/pages/schedule-page"
 import { FamilyPage } from "@/pages/family-page"
 
+const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, "")
+
 export default function App() {
   return (
-    <BrowserRouter basename="/baby">
+    <BrowserRouter basename={routerBasename}>
       <AuthProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />

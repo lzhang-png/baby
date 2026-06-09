@@ -113,7 +113,7 @@ export function SchedulePage() {
         <h2 className="text-xl font-semibold tracking-tight">
           {t("schedule.glanceTitle")}
         </h2>
-        <div className="overflow-hidden rounded-lg border">
+        <div className="bg-card overflow-hidden rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>

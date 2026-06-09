@@ -279,7 +279,7 @@ export function OngoingNowCards({ cards, labelYs, now }: OngoingNowCardsProps) {
                 )}
               />
               <div className="min-w-0 flex-1">
-                <p className="text-xs leading-snug text-white">
+                <p className="text-card-foreground text-xs leading-snug">
                   {ongoingTimelineLabel(card.item, liveNow)}
                 </p>
               </div>

@@ -75,9 +75,14 @@ function TrendCard({
               type="monotone"
               stroke={`var(--color-${dataKey})`}
               fill={`var(--color-${dataKey})`}
-              fillOpacity={0.15}
-              strokeWidth={2}
-              dot={{ r: 3 }}
+              fillOpacity={0.22}
+              strokeWidth={2.5}
+              dot={{
+                r: 3.5,
+                fill: `var(--color-${dataKey})`,
+                strokeWidth: 0,
+              }}
+              activeDot={{ r: 5, strokeWidth: 0 }}
               unit={suffix}
             />
           </AreaChart>
@@ -94,16 +99,34 @@ export function TrendCharts() {
   const nightConfig = {
     nightStretch: {
       label: t("schedule.chartLongestStretch"),
-      color: "var(--chart-2)",
+      theme: {
+        light: "oklch(0.52 0.22 285)",
+        medium: "oklch(0.72 0.16 285)",
+        dark: "oklch(0.72 0.16 285)",
+      },
     },
   } satisfies ChartConfig
 
   const feedConfig = {
-    feedSize: { label: t("schedule.chartFeedSize"), color: "var(--chart-1)" },
+    feedSize: {
+      label: t("schedule.chartFeedSize"),
+      theme: {
+        light: "oklch(0.55 0.18 235)",
+        medium: "oklch(0.74 0.14 210)",
+        dark: "oklch(0.74 0.14 210)",
+      },
+    },
   } satisfies ChartConfig
 
   const bottleConfig = {
-    bottleMl: { label: t("schedule.chartBottleMl"), color: "var(--chart-4)" },
+    bottleMl: {
+      label: t("schedule.chartBottleMl"),
+      theme: {
+        light: "oklch(0.50 0.17 160)",
+        medium: "oklch(0.70 0.13 165)",
+        dark: "oklch(0.70 0.13 165)",
+      },
+    },
   } satisfies ChartConfig
 
   return (

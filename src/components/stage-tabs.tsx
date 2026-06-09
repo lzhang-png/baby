@@ -117,7 +117,7 @@ export function StageTabs() {
 
   return (
     <Tabs defaultValue={stages[0].id} className="gap-4">
-      <TabsList className="!h-auto flex-wrap items-center gap-1 p-2">
+      <TabsList className="bg-card !h-auto flex-wrap items-center gap-1 p-2">
         {stages.map((s) => (
           <TabsTrigger key={s.id} value={s.id} className="!h-auto shrink-0 px-4 py-2">
             <span className="font-medium">{s.tab}</span>

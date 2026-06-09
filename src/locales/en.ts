@@ -30,6 +30,7 @@ const en = {
     chinese: "中文",
     appearance: "Appearance",
     light: "Light",
+    medium: "Medium",
     dark: "Dark",
     system: "System",
     textSize: "Text size",
@@ -100,7 +101,7 @@ const en = {
       "Send them the invite code. They go to Sign up, enter the code, and they'll see the same logs and schedule. Each person uses their own email and password.",
     inviteCopied: "Invite code copied",
     languageDescription: "Choose the language for the app interface.",
-    appearanceDescription: "Choose light or dark mode for the app.",
+    appearanceDescription: "Choose light, medium, dark, or follow system settings.",
     textSizeDescription: "Adjust the text size across the app.",
   },
   log: {

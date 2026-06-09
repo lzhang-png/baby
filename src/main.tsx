@@ -12,6 +12,7 @@ createRoot(document.getElementById("root")!).render(
     <ThemeProvider
       attribute="class"
       defaultTheme="dark"
+      themes={["light", "medium", "dark", "system"]}
       enableSystem
       storageKey="baby-theme"
     >

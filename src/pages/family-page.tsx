@@ -97,6 +97,7 @@ export function FamilyPage() {
             <SelectContent>
               <SelectGroup>
                 <SelectItem value="light">{t("common.light")}</SelectItem>
+                <SelectItem value="medium">{t("common.medium")}</SelectItem>
                 <SelectItem value="dark">{t("common.dark")}</SelectItem>
                 <SelectItem value="system">{t("common.system")}</SelectItem>
               </SelectGroup>

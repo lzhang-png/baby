@@ -8,6 +8,7 @@ import { useTimelineZoom } from "@/contexts/timeline-zoom-context"
 import { getNavigationDateBounds } from "@/lib/baby-tracker-import"
 import { addDays, isSameDay, startOfDay } from "@/lib/format"
 import i18n, { getDateLocale } from "@/lib/i18n"
+import { cn } from "@/lib/utils"
 
 const INITIAL_PAST_DAYS = 2
 const INITIAL_FUTURE_DAYS = 2
@@ -439,7 +440,11 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
                 data-day-key={key}
                 variant={isActive ? "default" : "secondary"}
                 size="sm"
-                className="shrink-0 rounded-full px-3"
+                className={cn(
+                  "shrink-0 rounded-full px-3",
+                  !isActive &&
+                    "bg-card hover:bg-card/90 dark:bg-secondary dark:hover:bg-[color-mix(in_oklch,var(--secondary),var(--foreground)_5%)]",
+                )}
                 aria-current={isActive ? "true" : undefined}
                 onClick={() => scrollToDay(date)}
               >

@@ -35,7 +35,7 @@ import {
 } from "@/lib/baby-tracker-import"
 import { formatDayHeading, isSameDay, startOfDay } from "@/lib/format"
 import { expandActivitiesForTimeline } from "@/lib/sleep-timeline"
-import { getScaledLogCardHeightPx, getScaledPx } from "@/lib/text-size"
+import { getScaledLogCardHeightPx, getScaledPx, useTextSizeVersion } from "@/lib/text-size"
 import type { ActivityItem } from "@/lib/types"
 import type { ActivityKind } from "@/lib/schedule-data"
 import {
@@ -68,13 +68,9 @@ const SCHEDULE_GRID =
   "grid-cols-[minmax(0,1fr)_1.25rem] gap-x-2"
 
 const DAY_SUMMARY_FIRST_LINE_HEIGHT_PX = 32
-const DAY_SUMMARY_VERTICAL_OFFSET_PX = 6
+const DAY_SUMMARY_VERTICAL_OFFSET_PX = -2
 const DAY_SUMMARY_BOTTOM_PADDING_PX = 12
 const DAY_SUMMARY_CARD_GAP_PX = 8
-
-function getDaySummaryFirstLineHalfHeight(): number {
-  return getScaledPx(DAY_SUMMARY_FIRST_LINE_HEIGHT_PX) / 2
-}
 
 function getDaySummaryVerticalOffset(): number {
   return getScaledPx(DAY_SUMMARY_VERTICAL_OFFSET_PX)
@@ -94,17 +90,12 @@ function getEstimatedDaySummaryBandHeight(activities: ActivityItem[]): number {
 
 function getEstimatedDaySummaryBottom(
   activities: ActivityItem[],
-  anchorY: number,
+  dayHeaderTopY: number,
 ): number {
   const bandHeight = getEstimatedDaySummaryBandHeight(activities)
   if (bandHeight <= 0) return 0
 
-  return (
-    anchorY -
-    getDaySummaryFirstLineHalfHeight() +
-    getDaySummaryVerticalOffset() +
-    bandHeight
-  )
+  return dayHeaderTopY + getDaySummaryVerticalOffset() + bandHeight
 }
 
 function getDaySummaryMinLabelY(summaryBottom: number): number {
@@ -212,6 +203,13 @@ function ProgressDot({ state }: { state: "past" | "current" | "future" }) {
   )
 }
 
+/** Half of the default (size-3) checkpoint dot — keeps dot center on the timeline bar. */
+const CHECKPOINT_DOT_CENTER_OFFSET_PX = 6
+
+function getCheckpointRowTopY(anchorY: number): number {
+  return anchorY - getScaledPx(CHECKPOINT_DOT_CENTER_OFFSET_PX)
+}
+
 type DayTimelineSectionProps = {
   babyId: string
   date: Date
@@ -260,18 +258,7 @@ export function DayTimelineSection({
     trunkX: 0,
     cardLeftX: 0,
   })
-  const [textSizeVersion, setTextSizeVersion] = useState(0)
-
-  useEffect(() => {
-    const observer = new MutationObserver(() => {
-      setTextSizeVersion((current) => current + 1)
-    })
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["data-text-size"],
-    })
-    return () => observer.disconnect()
-  }, [])
+  const textSizeVersion = useTextSizeVersion()
 
   const isToday = isSameDay(date, now)
   const isPastDay = startOfDay(date) < startOfDay(now)
@@ -331,11 +318,12 @@ export function DayTimelineSection({
     return layout.getProgressPx(nowLayoutMin)
   }, [isToday, layout, nowLayoutMin])
 
-  const daySummaryFirstLineHalfHeight = getDaySummaryFirstLineHalfHeight()
-  const daySummaryVerticalOffset = getDaySummaryVerticalOffset()
-
   const estimatedDaySummaryBottom = useMemo(
-    () => getEstimatedDaySummaryBottom(activities, layout.midnightY),
+    () =>
+      getEstimatedDaySummaryBottom(
+        activities,
+        getCheckpointRowTopY(layout.midnightY),
+      ),
     [activities, layout.midnightY, textSizeVersion, i18n.language],
   )
 
@@ -403,10 +391,14 @@ export function DayTimelineSection({
           : []),
       ]
 
+      const defaultCardHeight = getScaledLogCardHeightPx(
+        LOG_CARD_ESTIMATED_HEIGHT_PX,
+      )
+
       const labelYs = spreadLabelPositions(
         preferredYs,
         getScaledPx(DEFAULT_RECORDED_LABEL_EDGE_GAP_PX),
-        getScaledLogCardHeightPx(LOG_CARD_ESTIMATED_HEIGHT_PX),
+        defaultCardHeight,
         daySummaryMinLabelY,
         daySummaryMaxLabelY,
       )
@@ -518,13 +510,13 @@ export function DayTimelineSection({
 
         <div
           ref={dayStartRef}
-          className={cn(
-            "absolute left-0 z-10 grid min-h-24 -translate-y-1/2 py-5",
-            SCHEDULE_GRID,
-          )}
-          style={{ top: layout.midnightY, width: SCHEDULE_PANEL_WIDTH }}
+          className={cn("absolute left-0 z-10 grid", SCHEDULE_GRID)}
+          style={{
+            top: getCheckpointRowTopY(layout.midnightY),
+            width: SCHEDULE_PANEL_WIDTH,
+          }}
         >
-          <div className="min-w-0 self-center py-1 pr-1 text-right">
+          <div className="min-w-0 self-start pr-1 text-right">
             <time
               dateTime={date.toISOString()}
               className={cn(
@@ -547,7 +539,7 @@ export function DayTimelineSection({
             </p>
           </div>
 
-          <div className="relative z-30 flex items-center justify-center">
+          <div className="relative z-30 flex items-start justify-center">
             <ProgressDot state={dayHeaderDotState} />
           </div>
         </div>
@@ -563,15 +555,15 @@ export function DayTimelineSection({
             <div
               key={`${item.time}-${item.label}`}
               className={cn(
-                "absolute left-0 z-10 grid -translate-y-1/2",
+                "absolute left-0 z-10 grid",
                 SCHEDULE_GRID,
               )}
               style={{
-                top: layout.positions[index],
+                top: getCheckpointRowTopY(layout.positions[index]),
                 width: SCHEDULE_PANEL_WIDTH,
               }}
             >
-              <div className="min-w-0 self-center pr-1 text-right">
+              <div className="min-w-0 self-start pr-1 text-right">
                 <time
                   dateTime={item.time}
                   className={cn(
@@ -598,7 +590,7 @@ export function DayTimelineSection({
                 </div>
               </div>
 
-              <div className="relative z-30 flex items-center justify-center">
+              <div className="relative z-30 flex items-start justify-center">
                 <ProgressDot state={state} />
               </div>
             </div>
@@ -648,9 +640,8 @@ export function DayTimelineSection({
               className="absolute right-0 left-6 z-30 pb-3 text-left"
               style={{
                 top:
-                  layout.midnightY -
-                  daySummaryFirstLineHalfHeight +
-                  daySummaryVerticalOffset,
+                  getCheckpointRowTopY(layout.midnightY) +
+                  getDaySummaryVerticalOffset(),
               }}
             >
               <DayActivitySummary activities={activities} />

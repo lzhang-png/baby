@@ -5,6 +5,7 @@ import {
   EllipsisVerticalIcon,
   MilkIcon,
   MoonIcon,
+  SunIcon,
   type LucideIcon,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -43,7 +44,7 @@ export const CONNECTOR_TRUNK_OFFSET_PX = 16
 export const TIMELINE_MUTED_LINE_CLASS = "bg-timeline-line"
 export const TIMELINE_CONNECTOR_STROKE_CLASS = "stroke-timeline-line"
 export const CONNECTOR_CORNER_RADIUS_PX = 6
-export const LOG_CARD_ESTIMATED_HEIGHT_PX = 46
+export const LOG_CARD_ESTIMATED_HEIGHT_PX = 52 // xs time + sm detail + py-1.5
 
 function buildRoundedConnectorPath(
   barX: number,
@@ -85,13 +86,25 @@ function buildRoundedConnectorPath(
   ].join(" ")
 }
 
-const EVENT_CARD_MAX_WIDTH = "max-w-[220px]"
+const EVENT_CARD_MAX_WIDTH = "max-w-[280px]"
 
 export const RECORDED_COLORS: Record<ActivityItem["kind"], string> = {
   feed: "text-sky-400",
   sleep: "text-indigo-400",
   diaper: "text-emerald-400",
   pump: "text-violet-400",
+}
+
+const SLEEP_END_COLOR = "text-amber-400"
+
+function getRecordedIconColor(
+  item: ActivityItem,
+  sleepPhase?: SleepTimelinePhase,
+) {
+  if (item.kind === "sleep" && sleepPhase === "end") {
+    return SLEEP_END_COLOR
+  }
+  return RECORDED_COLORS[item.kind]
 }
 
 export type PlacedActivity = {
@@ -119,7 +132,10 @@ type EventCardProps = {
 function EventCard({ event, now, onEdit, onDelete }: EventCardProps) {
   const { t } = useTranslation()
   const { item, displayAt, sleepPhase } = event
-  const Icon = RECORDED_ICONS[item.kind]
+  const Icon =
+    item.kind === "sleep" && sleepPhase === "end"
+      ? SunIcon
+      : RECORDED_ICONS[item.kind]
   const editable =
     isEditableActivity(item) &&
     (!sleepPhase ||
@@ -137,13 +153,16 @@ function EventCard({ event, now, onEdit, onDelete }: EventCardProps) {
     >
       <Icon
         aria-hidden
-        className={cn("mt-0.5 size-3.5 shrink-0", RECORDED_COLORS[item.kind])}
+        className={cn(
+          "mt-0.5 size-3.5 shrink-0",
+          getRecordedIconColor(item, sleepPhase),
+        )}
       />
       <div className="min-w-0 flex-1">
-        <p className="text-xs font-medium tabular-nums">
+        <p className="text-muted-foreground text-xs font-medium tabular-nums">
           {activityTime(item, displayAt)}
         </p>
-        <p className="text-muted-foreground text-xs leading-snug">
+        <p className="text-sm leading-snug">
           {activitySummary(item, { sleepPhase, now })}
         </p>
       </div>
@@ -296,6 +315,38 @@ export type OngoingConnector = {
   labelY: number
 }
 
+function ConnectorLinePath({
+  pathD,
+  showShadow,
+}: {
+  pathD: string
+  showShadow?: boolean
+}) {
+  return (
+    <g>
+      {showShadow && (
+        <path
+          d={pathD}
+          fill="none"
+          className="timeline-connector-shadow-stroke"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          strokeWidth={1}
+          transform="translate(0, -1.5)"
+        />
+      )}
+      <path
+        d={pathD}
+        fill="none"
+        className={TIMELINE_CONNECTOR_STROKE_CLASS}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth={1}
+      />
+    </g>
+  )
+}
+
 export function RecordedEventConnectors({
   events,
   ongoingConnectors = [],
@@ -313,6 +364,9 @@ export function RecordedEventConnectors({
   cardLeftX: number
   className?: string
 }) {
+  const hasOngoingConnectors =
+    nowAnchorY != null && ongoingConnectors.length > 0
+
   return (
     <svg
       aria-hidden
@@ -321,41 +375,44 @@ export function RecordedEventConnectors({
         className,
       )}
     >
-      {events.map(({ id, anchorY, labelY }) => (
-        <path
-          key={`${id}-line`}
-          d={buildRoundedConnectorPath(
+      {events.map(({ id, anchorY, labelY }, index) => {
+        const pathD = buildRoundedConnectorPath(
+          barX,
+          anchorY,
+          trunkX,
+          labelY,
+          cardLeftX,
+        )
+        const isBelowAnotherLine =
+          index < events.length - 1 || hasOngoingConnectors
+
+        return (
+          <ConnectorLinePath
+            key={`${id}-line`}
+            pathD={pathD}
+            showShadow={isBelowAnotherLine}
+          />
+        )
+      })}
+      {hasOngoingConnectors &&
+        ongoingConnectors.map(({ id, labelY }, index) => {
+          const pathD = buildRoundedConnectorPath(
             barX,
-            anchorY,
+            nowAnchorY!,
             trunkX,
             labelY,
             cardLeftX,
-          )}
-          fill="none"
-          className={TIMELINE_CONNECTOR_STROKE_CLASS}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          strokeWidth={1}
-        />
-      ))}
-      {nowAnchorY != null &&
-        ongoingConnectors.map(({ id, labelY }) => (
-          <path
-            key={`${id}-ongoing-line`}
-            d={buildRoundedConnectorPath(
-              barX,
-              nowAnchorY,
-              trunkX,
-              labelY,
-              cardLeftX,
-            )}
-            fill="none"
-            className={TIMELINE_CONNECTOR_STROKE_CLASS}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={1}
-          />
-        ))}
+          )
+          const isBelowAnotherLine = index < ongoingConnectors.length - 1
+
+          return (
+            <ConnectorLinePath
+              key={`${id}-ongoing-line`}
+              pathD={pathD}
+              showShadow={isBelowAnotherLine}
+            />
+          )
+        })}
       {events.map(({ id, anchorY }) => (
         <circle
           key={`${id}-dot`}

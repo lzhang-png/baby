@@ -201,7 +201,10 @@ export function AppShell() {
         handleOnly
         repositionInputs={false}
       >
-        <DrawerContent className="min-w-0 bg-background pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
+        <DrawerContent
+          showHandle={false}
+          className="min-w-0 bg-background pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]"
+        >
           <LogPanel onLogged={() => setLogOpen(false)} />
         </DrawerContent>
       </Drawer>

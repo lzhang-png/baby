@@ -335,23 +335,33 @@ export function spreadLabelPositions(
   itemHeightPx = 46,
   minCenterY = 0,
   maxCenterY = Number.POSITIVE_INFINITY,
+  itemHeightsPx?: number[],
 ): number[] {
   if (tops.length === 0) return []
 
-  const minCenterGap = itemHeightPx + minEdgeGapPx
+  const heightAt = (index: number) => itemHeightsPx?.[index] ?? itemHeightPx
+
   const sorted = tops
     .map((top, index) => ({ top, index }))
     .sort((a, b) => a.top - b.top)
 
   const result = new Array<number>(tops.length)
-  let last = -Infinity
+  let lastCenter = -Infinity
+  let lastHeight = itemHeightPx
+
   for (const entry of sorted) {
+    const height = heightAt(entry.index)
+    const minCenter =
+      lastCenter === -Infinity
+        ? minCenterY
+        : lastCenter + lastHeight / 2 + height / 2 + minEdgeGapPx
     const y = Math.min(
-      Math.max(entry.top, last + minCenterGap, minCenterY),
+      Math.max(entry.top, minCenter, minCenterY),
       maxCenterY,
     )
     result[entry.index] = y
-    last = y
+    lastCenter = y
+    lastHeight = height
   }
   return result
 }

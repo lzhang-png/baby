@@ -36,6 +36,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { DrawerHandle, DrawerHandleBar } from "@/components/ui/drawer"
 type LogPanelProps = {
   onLogged?: () => void
 }
@@ -566,7 +567,11 @@ export function LogPanel({ onLogged }: LogPanelProps) {
 
   return (
     <Tabs defaultValue="feed" className="flex min-w-0 shrink-0 flex-col gap-0">
-      <div className="min-w-0 shrink-0 overflow-x-hidden px-4 pt-3 pb-4">
+      <DrawerHandle className="min-w-0 flex-col">
+        <div className="flex w-full justify-center py-2">
+          <DrawerHandleBar />
+        </div>
+        <div className="min-w-0 shrink-0 overflow-x-hidden px-4 pt-3 pb-4">
       <TabsContent value="feed" className="mt-0 flex-none">
         <LogSection title={t("log.feeding")}>
           {feedType === "nursing" ? (
@@ -830,9 +835,11 @@ export function LogPanel({ onLogged }: LogPanelProps) {
             </form>
         </LogSection>
       </TabsContent>
-      </div>
+        </div>
+      </DrawerHandle>
 
       <TabsList
+        data-vaul-no-drag=""
         variant="line"
         className="bg-background !h-auto w-full shrink-0 items-stretch justify-around gap-0 overflow-visible rounded-none border-0 p-0"
       >

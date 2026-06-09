@@ -53,13 +53,51 @@ function isPortaledOverlayTarget(target: EventTarget | null) {
   )
 }
 
+function DrawerHandleBar({ className }: { className?: string }) {
+  return (
+    <div
+      aria-hidden
+      className={cn("mx-auto h-1 w-[100px] shrink-0 rounded-full bg-muted", className)}
+    />
+  )
+}
+
+function DrawerHandle({
+  className,
+  children,
+  ...props
+}: React.ComponentProps<typeof DrawerPrimitive.Handle>) {
+  return (
+    <DrawerPrimitive.Handle
+      data-slot="drawer-handle"
+      className={cn(
+        "mx-auto w-full max-w-none shrink-0 touch-none",
+        "group-data-[vaul-drawer-direction=bottom]/drawer-content:flex",
+        "group-data-[vaul-drawer-direction=bottom]/drawer-content:cursor-grab",
+        "group-data-[vaul-drawer-direction=bottom]/drawer-content:active:cursor-grabbing",
+        className,
+      )}
+      {...props}
+    >
+      {children ?? (
+        <div className="flex w-full justify-center py-2">
+          <DrawerHandleBar />
+        </div>
+      )}
+    </DrawerPrimitive.Handle>
+  )
+}
+
 function DrawerContent({
   className,
   children,
+  showHandle = true,
   onPointerDownOutside,
   onFocusOutside,
   ...props
-}: React.ComponentProps<typeof DrawerPrimitive.Content>) {
+}: React.ComponentProps<typeof DrawerPrimitive.Content> & {
+  showHandle?: boolean
+}) {
   return (
     <DrawerPortal data-slot="drawer-portal">
       <DrawerOverlay />
@@ -83,7 +121,7 @@ function DrawerContent({
         )}
         {...props}
       >
-        <div className="mx-auto mt-4 hidden h-1 w-[100px] shrink-0 rounded-full bg-muted group-data-[vaul-drawer-direction=bottom]/drawer-content:block" />
+        {showHandle ? <DrawerHandle /> : null}
         {children}
       </DrawerPrimitive.Content>
     </DrawerPortal>
@@ -149,6 +187,8 @@ export {
   DrawerTrigger,
   DrawerClose,
   DrawerContent,
+  DrawerHandle,
+  DrawerHandleBar,
   DrawerHeader,
   DrawerFooter,
   DrawerTitle,

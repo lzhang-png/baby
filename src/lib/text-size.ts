@@ -1,3 +1,5 @@
+import { useEffect, useState } from "react"
+
 import { safeGetItem, safeSetItem } from "@/lib/safe-storage"
 
 export type TextSize = "small" | "default" | "large"
@@ -38,10 +40,26 @@ export function getScaledPx(basePx: number): number {
   return Math.ceil(basePx * getTextSizeScale())
 }
 
-/** Timeline cards are two-line; large text needs a little extra clearance. */
+/** Height estimate for timeline card spacing (not applied as card min-height). */
 export function getScaledLogCardHeightPx(baseHeightPx: number): number {
-  const scaled = getScaledPx(baseHeightPx)
-  return getTextSizeScale() > 1 ? scaled + 6 : scaled
+  return Math.ceil(baseHeightPx * getTextSizeScale())
+}
+
+export function useTextSizeVersion(): number {
+  const [version, setVersion] = useState(0)
+
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setVersion((current) => current + 1)
+    })
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: [TEXT_SIZE_ATTR],
+    })
+    return () => observer.disconnect()
+  }, [])
+
+  return version
 }
 
 applyTextSize(getStoredTextSize())

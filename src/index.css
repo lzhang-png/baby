@@ -160,6 +160,10 @@
 }
 
 @layer base {
+  .timeline-connector-shadow-stroke {
+    stroke: var(--background);
+  }
+
   * {
     @apply border-border outline-ring/50;
     }
@@ -207,4 +211,27 @@
 /* Vaul adds a tall ::after pseudo-element for drag affordance; it creates empty scroll space. */
 [data-slot="drawer-content"]::after {
   display: none !important;
+}
+
+/* Let custom drawer handles fill the drag zone; Vaul defaults to a small gray pill. */
+[data-slot="drawer-handle"][data-vaul-handle] {
+  background: transparent;
+  opacity: 1;
+  height: auto;
+  width: 100%;
+  max-width: none;
+  margin: 0;
+  border-radius: 0;
+}
+
+[data-slot="drawer-handle"] [data-vaul-handle-hitarea] {
+  position: static;
+  inset: auto;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 100%;
+  transform: none;
+  flex-direction: inherit;
+  touch-action: inherit;
 }

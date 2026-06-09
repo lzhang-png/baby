@@ -5,6 +5,8 @@ const zh = {
     now: "现在",
     goDownToNow: "滚动到现在",
     goUpToNow: "滚动到现在",
+    zoomIn: "放大",
+    zoomOut: "缩小",
     edit: "编辑",
     delete: "删除",
     saveChanges: "保存修改",
@@ -30,7 +32,7 @@ const zh = {
   nav: {
     timeline: "时间线",
     schedule: "作息计划",
-    family: "家庭",
+    settings: "设置",
     openMenu: "打开导航菜单",
     logActivity: "记录活动",
   },
@@ -77,7 +79,7 @@ const zh = {
     joinFailed: "加入失败",
   },
   family: {
-    title: "家庭",
+    title: "设置",
     subtitle: "分享邀请码，让伴侣或亲属注册并为 Luca 记录数据。",
     signedInAs: "当前登录",
     household: "家庭",

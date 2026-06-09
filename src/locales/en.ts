@@ -5,6 +5,8 @@ const en = {
     now: "Now",
     goDownToNow: "Go down to now",
     goUpToNow: "Go up to now",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
     edit: "Edit",
     delete: "Delete",
     saveChanges: "Save changes",
@@ -30,7 +32,7 @@ const en = {
   nav: {
     timeline: "Timeline",
     schedule: "Schedule",
-    family: "Family",
+    settings: "Settings",
     openMenu: "Open navigation menu",
     logActivity: "Log activity",
   },
@@ -78,7 +80,7 @@ const en = {
     joinFailed: "Join failed",
   },
   family: {
-    title: "Family",
+    title: "Settings",
     subtitle:
       "Share the invite code so your partner or relatives can sign up and log for Luca.",
     signedInAs: "Signed in as",

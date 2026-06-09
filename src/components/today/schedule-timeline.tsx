@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { DayTimelineSection } from "@/components/today/day-timeline-section"
 import { Button } from "@/components/ui/button"
+import { useTimelineZoom } from "@/contexts/timeline-zoom-context"
 import { getNavigationDateBounds } from "@/lib/baby-tracker-import"
 import { addDays, isSameDay, startOfDay } from "@/lib/format"
 import i18n, { getDateLocale } from "@/lib/i18n"
@@ -17,7 +18,6 @@ const DAY_ACTIVE_ANCHOR_SCROLL_DOWN_PX = 24
 const DAY_ACTIVE_ANCHOR_SCROLL_UP_PX = 80
 const NOW_FAB_CLASS =
   "fixed left-4 z-[60] h-12 gap-1.5 rounded-full px-4 text-white shadow-lg hover:text-white [&_svg]:text-white"
-
 type NowScrollOffset = "at" | "past" | "future"
 
 type ScheduleTimelineProps = {
@@ -153,6 +153,7 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
   const [activeDayKey, setActiveDayKey] = useState<string | null>(() =>
     dateKey(startOfDay(new Date())),
   )
+  const { pxPerMinute, registerScrollElement } = useTimelineZoom()
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const pillsRef = useRef<HTMLDivElement>(null)
@@ -162,6 +163,15 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
   const todayDayStartRef = useRef<HTMLDivElement | null>(null)
   const dayStartRefs = useRef(new Map<string, HTMLDivElement>())
   const navigationDays = useMemo(() => buildAllNavigationDays(), [])
+
+  const setScrollNode = useCallback(
+    (el: HTMLDivElement | null) => {
+      scrollRef.current = el
+      registerScrollElement(el)
+    },
+    [registerScrollElement],
+  )
+
   const loadingMoreRef = useRef(false)
   const hasScrolledToTodayRef = useRef(false)
   const lastScrollTopRef = useRef(0)
@@ -440,7 +450,7 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
         </div>
       </div>
 
-      <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+      <div ref={setScrollNode} className="min-h-0 flex-1 overflow-y-auto">
         <div ref={topSentinelRef} className="h-px shrink-0" aria-hidden />
 
         {days.map((date) => (
@@ -449,6 +459,7 @@ export function ScheduleTimeline({ babyId }: ScheduleTimelineProps) {
             babyId={babyId}
             date={date}
             now={now}
+            pxPerMinute={pxPerMinute}
             registerNowRef={
               isSameDay(date, today) ? registerNowRef : undefined
             }

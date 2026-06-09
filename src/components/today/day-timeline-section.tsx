@@ -151,6 +151,7 @@ type DayTimelineSectionProps = {
   babyId: string
   date: Date
   now: Date
+  pxPerMinute: number
   registerNowRef?: (el: HTMLDivElement | null) => void
   registerDayStartRef?: (date: Date, el: HTMLDivElement | null) => void
 }
@@ -159,6 +160,7 @@ export function DayTimelineSection({
   babyId,
   date,
   now,
+  pxPerMinute,
   registerNowRef,
   registerDayStartRef,
 }: DayTimelineSectionProps) {
@@ -172,7 +174,10 @@ export function DayTimelineSection({
     [date, i18n.language],
   )
   const items = useMemo(() => getStageDayItems(stage), [stage])
-  const layout = useMemo(() => getSpreadTimelineLayout(items), [items])
+  const layout = useMemo(
+    () => getSpreadTimelineLayout(items, pxPerMinute),
+    [items, pxPerMinute],
+  )
 
   const timelineRef = useRef<HTMLDivElement>(null)
   const dayStartRef = useRef<HTMLDivElement>(null)

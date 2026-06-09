@@ -28,6 +28,14 @@ const en = {
     language: "Language",
     english: "English",
     chinese: "中文",
+    appearance: "Appearance",
+    light: "Light",
+    dark: "Dark",
+    system: "System",
+    textSize: "Text size",
+    textSizeSmall: "Small",
+    textSizeDefault: "Default",
+    textSizeLarge: "Large",
   },
   nav: {
     timeline: "Timeline",
@@ -92,6 +100,8 @@ const en = {
       "Send them the invite code. They go to Sign up, enter the code, and they'll see the same logs and schedule. Each person uses their own email and password.",
     inviteCopied: "Invite code copied",
     languageDescription: "Choose the language for the app interface.",
+    appearanceDescription: "Choose light or dark mode for the app.",
+    textSizeDescription: "Adjust the text size across the app.",
   },
   log: {
     feed: "Feed",

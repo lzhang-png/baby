@@ -1,7 +1,24 @@
 <!doctype html>
-<html lang="zh-CN" class="dark" style="color-scheme: dark">
+<html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      try {
+        const stored = localStorage.getItem("baby-theme") || "dark"
+        const resolved =
+          stored === "system"
+            ? window.matchMedia("(prefers-color-scheme: dark)").matches
+              ? "dark"
+              : "light"
+            : stored
+        document.documentElement.classList.toggle("dark", resolved === "dark")
+        document.documentElement.style.colorScheme = resolved
+        const textSize = localStorage.getItem("baby-text-size")
+        if (textSize && textSize !== "default") {
+          document.documentElement.setAttribute("data-text-size", textSize)
+        }
+      } catch (_) {}
+    </script>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>Luca's Feeding & Sleep Plan</title>

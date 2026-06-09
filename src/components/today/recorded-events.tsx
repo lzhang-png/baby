@@ -40,8 +40,8 @@ export const RECORDED_ICONS: Record<ActivityItem["kind"], LucideIcon> = {
 
 export const LOG_CARD_LEFT_OFFSET_PX = 24 // matches left-6 on card wrapper
 export const CONNECTOR_TRUNK_OFFSET_PX = 16
-export const TIMELINE_MUTED_LINE_CLASS = "bg-[var(--muted)]"
-export const TIMELINE_CONNECTOR_STROKE_CLASS = "stroke-[var(--muted)]"
+export const TIMELINE_MUTED_LINE_CLASS = "bg-timeline-line"
+export const TIMELINE_CONNECTOR_STROKE_CLASS = "stroke-timeline-line"
 export const CONNECTOR_CORNER_RADIUS_PX = 6
 export const LOG_CARD_ESTIMATED_HEIGHT_PX = 46
 

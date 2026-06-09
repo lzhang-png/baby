@@ -28,6 +28,14 @@ const zh = {
     language: "语言",
     english: "English",
     chinese: "中文",
+    appearance: "外观",
+    light: "浅色",
+    dark: "深色",
+    system: "跟随系统",
+    textSize: "文字大小",
+    textSizeSmall: "小",
+    textSizeDefault: "标准",
+    textSizeLarge: "大",
   },
   nav: {
     timeline: "时间线",
@@ -90,6 +98,8 @@ const zh = {
       "将邀请码发送给对方。对方前往注册页面输入邀请码，即可看到相同的记录和作息计划。每人使用各自的邮箱和密码。",
     inviteCopied: "邀请码已复制",
     languageDescription: "选择应用界面显示的语言。",
+    appearanceDescription: "选择应用的浅色或深色模式。",
+    textSizeDescription: "调整应用内文字显示大小。",
   },
   log: {
     feed: "喂奶",

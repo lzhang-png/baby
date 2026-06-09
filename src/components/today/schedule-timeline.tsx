@@ -17,7 +17,7 @@ const DAY_SCROLL_ANCHOR_PX = 24
 const DAY_ACTIVE_ANCHOR_SCROLL_DOWN_PX = 24
 const DAY_ACTIVE_ANCHOR_SCROLL_UP_PX = 80
 const NOW_FAB_CLASS =
-  "fixed left-4 z-[60] h-12 gap-1.5 rounded-full px-4 shadow-lg"
+  "fixed left-4 z-[60] h-14 gap-1.5 rounded-full px-4 shadow-lg"
 type NowScrollOffset = "at" | "past" | "future"
 
 type ScheduleTimelineProps = {

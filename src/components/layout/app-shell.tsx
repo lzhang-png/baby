@@ -88,7 +88,7 @@ function BottomFabBar({
 
   return (
     <div
-      className="fixed right-4 z-50 flex items-center gap-3"
+      className="fixed right-4 z-50 flex items-center gap-2"
       style={{ bottom: FAB_BOTTOM }}
     >
       {isTimelinePage && (

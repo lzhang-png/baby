@@ -104,13 +104,9 @@ function StagePanel({ stage }: { stage: Stage }) {
 export function StageTabs() {
   return (
     <Tabs defaultValue={STAGES[0].id} className="gap-4">
-      <TabsList className="h-auto w-full p-1.5">
+      <TabsList className="!h-auto flex-wrap items-center gap-1 p-2">
         {STAGES.map((s) => (
-          <TabsTrigger
-            key={s.id}
-            value={s.id}
-            className="h-auto min-h-14 flex-1 flex-col items-start justify-center gap-1 px-3 py-3"
-          >
+          <TabsTrigger key={s.id} value={s.id} className="!h-auto shrink-0 px-4 py-2">
             <span className="font-medium">{s.tab}</span>
             <span className="text-muted-foreground text-xs">{s.dates}</span>
           </TabsTrigger>

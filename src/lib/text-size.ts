@@ -1,10 +1,12 @@
+import { safeGetItem, safeSetItem } from "@/lib/safe-storage"
+
 export type TextSize = "small" | "default" | "large"
 
 const STORAGE_KEY = "baby-text-size"
 const TEXT_SIZE_ATTR = "data-text-size"
 
 export function getStoredTextSize(): TextSize {
-  const stored = localStorage.getItem(STORAGE_KEY)
+  const stored = safeGetItem(STORAGE_KEY)
   return stored === "small" || stored === "default" || stored === "large"
     ? stored
     : "default"
@@ -21,7 +23,7 @@ export function applyTextSize(size: TextSize) {
 
 export function setAppTextSize(size: TextSize) {
   applyTextSize(size)
-  localStorage.setItem(STORAGE_KEY, size)
+  safeSetItem(STORAGE_KEY, size)
 }
 
 export function getTextSizeScale(): number {

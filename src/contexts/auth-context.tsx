@@ -69,32 +69,40 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let mounted = true
 
     async function bootstrap() {
-      const {
-        data: { session: initialSession },
-      } = await supabase.auth.getSession()
-      if (!mounted) return
+      try {
+        const {
+          data: { session: initialSession },
+        } = await supabase.auth.getSession()
+        if (!mounted) return
 
-      setSession(initialSession)
-      setUser(initialSession?.user ?? null)
+        setSession(initialSession)
+        setUser(initialSession?.user ?? null)
 
-      if (initialSession) {
-        setHouseholdLoading(true)
-        try {
-          const result = await loadHouseholdData()
-          if (!mounted) return
-          setHousehold(result.household)
-          setBaby(result.baby)
-        } catch {
-          if (!mounted) return
-          setHousehold(null)
-          setBaby(null)
-        } finally {
-          if (mounted) setHouseholdLoading(false)
+        if (initialSession) {
+          setHouseholdLoading(true)
+          try {
+            const result = await loadHouseholdData()
+            if (!mounted) return
+            setHousehold(result.household)
+            setBaby(result.baby)
+          } catch {
+            if (!mounted) return
+            setHousehold(null)
+            setBaby(null)
+          } finally {
+            if (mounted) setHouseholdLoading(false)
+          }
         }
+      } catch {
+        if (!mounted) return
+        setSession(null)
+        setUser(null)
+        setHousehold(null)
+        setBaby(null)
+      } finally {
+        initialized.current = true
+        if (mounted) setLoading(false)
       }
-
-      initialized.current = true
-      if (mounted) setLoading(false)
     }
 
     void bootstrap()

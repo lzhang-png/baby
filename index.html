@@ -24,7 +24,24 @@
     <title>Luca's Feeding & Sleep Plan</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <p style="margin: 0; padding: 2rem; font-family: system-ui, sans-serif; color: #a1a1aa; text-align: center;">
+        Loading…
+      </p>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
+    <script>
+      window.addEventListener("error", function (event) {
+        var root = document.getElementById("root")
+        if (!root || root.childElementCount > 1) return
+        root.innerHTML =
+          '<div style="margin:2rem auto;max-width:28rem;padding:1.25rem;border:1px solid #3f3f46;border-radius:0.75rem;font-family:system-ui,sans-serif;color:#fafafa;background:#18181b;">' +
+          '<p style="margin:0 0 0.5rem;font-weight:600;">App failed to start</p>' +
+          '<p style="margin:0;font-size:0.875rem;color:#a1a1aa;">' +
+          (event.message || "Unknown error") +
+          ". Try a hard refresh, disable private browsing, or check the browser console." +
+          "</p></div>"
+      })
+    </script>
   </body>
 </html>

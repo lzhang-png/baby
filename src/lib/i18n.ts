@@ -3,13 +3,14 @@ import { initReactI18next } from "react-i18next"
 
 import en from "@/locales/en"
 import zh from "@/locales/zh"
+import { safeGetItem, safeSetItem } from "@/lib/safe-storage"
 
 export type AppLocale = "en" | "zh"
 
 const STORAGE_KEY = "baby-locale"
 
 function getStoredLocale(): AppLocale {
-  const stored = localStorage.getItem(STORAGE_KEY)
+  const stored = safeGetItem(STORAGE_KEY)
   return stored === "en" || stored === "zh" ? stored : "zh"
 }
 
@@ -29,7 +30,7 @@ export function getDateLocale(language = i18n.language): string {
 
 export function setAppLanguage(locale: AppLocale) {
   void i18n.changeLanguage(locale)
-  localStorage.setItem(STORAGE_KEY, locale)
+  safeSetItem(STORAGE_KEY, locale)
   document.documentElement.lang = locale === "zh" ? "zh-CN" : "en"
 }
 

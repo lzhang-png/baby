@@ -1,9 +1,17 @@
 import { createClient, type SupabaseClient } from "@supabase/supabase-js"
 
-const url = import.meta.env.VITE_SUPABASE_URL
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
+const url = import.meta.env.VITE_SUPABASE_URL?.trim()
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim()
 
-export const isSupabaseConfigured = Boolean(url && anonKey)
+const PLACEHOLDER_MARKERS = ["YOUR_PROJECT", "your-anon-key", "your-anon"]
+
+export const isSupabaseConfigured = Boolean(
+  url &&
+    anonKey &&
+    !PLACEHOLDER_MARKERS.some(
+      (marker) => url.includes(marker) || anonKey.includes(marker),
+    ),
+)
 
 export const supabase: SupabaseClient = isSupabaseConfigured
   ? createClient(url!, anonKey!, {

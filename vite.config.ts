@@ -8,6 +8,10 @@ export default defineConfig(({ mode }) => ({
   // GitHub Pages serves from /baby/; local dev uses / for simpler URLs.
   base: mode === "production" ? "/baby/" : "/",
   plugins: [react(), tailwindcss()],
+  server: {
+    host: true,
+    port: 5173,
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),

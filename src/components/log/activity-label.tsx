@@ -117,6 +117,16 @@ export type OngoingTimelineCard = {
   item: ActivityItem
 }
 
+export function isOngoingNursingFeed(item: ActivityItem): boolean {
+  if (item.kind !== "feed") return false
+  const feed = item.data
+  return (
+    feed.feed_type === "nursing" &&
+    feed.duration_min == null &&
+    (feed.side === "L" || feed.side === "R")
+  )
+}
+
 export function getOngoingTimelineCards(
   activities: ActivityItem[],
   date: Date,
@@ -136,13 +146,8 @@ export function getOngoingTimelineCards(
     }
 
     if (item.kind === "feed") {
-      const feed = item.data
-      if (
-        feed.feed_type === "nursing" &&
-        feed.duration_min == null &&
-        (feed.side === "L" || feed.side === "R")
-      ) {
-        cards.push({ id: `ongoing-nursing-${feed.id}`, item })
+      if (isOngoingNursingFeed(item)) {
+        cards.push({ id: `ongoing-nursing-${item.data.id}`, item })
       }
     }
   }

@@ -100,6 +100,17 @@ export function pauseSideState(state: SideNursingState): SideNursingState {
   }
 }
 
+export function setSideAccumulatedSec(
+  state: SideNursingState,
+  elapsedSec: number,
+): SideNursingState {
+  if (state.status !== "paused") return state
+  return {
+    ...state,
+    accumulatedSec: Math.max(0, Math.floor(elapsedSec)),
+  }
+}
+
 export function resumeSideState(state: SideNursingState): SideNursingState {
   return {
     ...state,

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type SetStateAction } from "react"
+import { useCallback, useEffect, useRef, useState, type SetStateAction } from "react"
 import { useTranslation } from "react-i18next"
 import {
   BlendIcon,
@@ -7,6 +7,7 @@ import {
   Loader2Icon,
   MilkIcon,
   PauseIcon,
+  PencilIcon,
   PlayIcon,
   ToiletIcon,
 } from "lucide-react"
@@ -28,7 +29,9 @@ import {
 } from "@/lib/api/logs"
 import {
   formatElapsedClock,
+  formatTime,
   fromDateAndTimeValues,
+  parseElapsedClock,
   toDateInputValue,
   toTimeInputValue,
 } from "@/lib/format"
@@ -40,6 +43,7 @@ import {
   pauseSideState,
   readNursingTimerCache,
   resumeSideState,
+  setSideAccumulatedSec,
   writeNursingTimerCache,
   type NursingSideKey,
   type SideNursingState,
@@ -104,6 +108,7 @@ function SideTimerRow({
   onPause,
   onResume,
   disabled,
+  compact,
 }: {
   label: string
   state: { status: SideTimerStatus }
@@ -112,6 +117,7 @@ function SideTimerRow({
   onPause: () => void
   onResume: () => void
   disabled?: boolean
+  compact?: boolean
 }) {
   const { t } = useTranslation()
   const isRunning = state.status === "running"
@@ -120,14 +126,22 @@ function SideTimerRow({
   return (
     <div
       className={cn(
-        "flex items-center justify-between gap-3 rounded-lg border p-3",
+        "rounded-lg border p-3",
+        compact
+          ? "flex h-full min-w-0 flex-col gap-2"
+          : "flex items-center justify-between gap-3",
         isRunning && "border-primary bg-primary/10 ring-2 ring-primary/40",
         isPaused && "border-primary/40 bg-primary/5",
       )}
     >
-      <div className="min-w-0">
+      <div className={cn("min-w-0", compact && "flex-1")}>
         <p className="text-sm font-medium">{label}</p>
-        <p className="font-heading text-2xl font-semibold tabular-nums">
+        <p
+          className={cn(
+            "font-heading font-semibold tabular-nums",
+            compact ? "text-xl" : "text-2xl",
+          )}
+        >
           {formatElapsedClock(elapsedSec)}
         </p>
       </div>
@@ -135,6 +149,7 @@ function SideTimerRow({
         <Button
           type="button"
           variant="secondary"
+          className={compact ? "mt-auto w-full" : undefined}
           onClick={onStart}
           disabled={disabled}
         >
@@ -145,6 +160,7 @@ function SideTimerRow({
         <Button
           type="button"
           variant="outline"
+          className={compact ? "mt-auto w-full" : undefined}
           onClick={onPause}
           disabled={disabled}
         >
@@ -155,6 +171,162 @@ function SideTimerRow({
         <Button
           type="button"
           variant="secondary"
+          className={compact ? "mt-auto w-full" : undefined}
+          onClick={onResume}
+          disabled={disabled}
+        >
+          <PlayIcon data-icon="inline-start" />
+          {t("common.resume")}
+        </Button>
+      )}
+    </div>
+  )
+}
+
+function NursingSideTimerRow({
+  sideKey,
+  label,
+  state,
+  elapsedSec,
+  onStart,
+  onPause,
+  onResume,
+  onDurationChange,
+  disabled,
+}: {
+  sideKey: NursingSideKey
+  label: string
+  state: SideNursingState
+  elapsedSec: number
+  onStart: () => void
+  onPause: () => void
+  onResume: () => void
+  onDurationChange: (elapsedSec: number) => void
+  disabled?: boolean
+}) {
+  const { t } = useTranslation()
+  const [editingDuration, setEditingDuration] = useState(false)
+  const [durationDraft, setDurationDraft] = useState("")
+  const durationInputRef = useRef<HTMLInputElement>(null)
+  const isRunning = state.status === "running"
+  const isPaused = state.status === "paused"
+  const durationInputId = `nursing-${sideKey}-duration`
+
+  useEffect(() => {
+    if (state.status !== "paused") {
+      setEditingDuration(false)
+    }
+  }, [state.status])
+
+  useEffect(() => {
+    if (!editingDuration) return
+    durationInputRef.current?.focus()
+    durationInputRef.current?.select()
+  }, [editingDuration])
+
+  function beginDurationEdit() {
+    setDurationDraft(formatElapsedClock(elapsedSec))
+    setEditingDuration(true)
+  }
+
+  function commitDurationEdit() {
+    const parsed = parseElapsedClock(durationDraft)
+    if (parsed == null) {
+      setEditingDuration(false)
+      return
+    }
+
+    onDurationChange(parsed)
+    setEditingDuration(false)
+  }
+
+  return (
+    <div
+      className={cn(
+        "flex h-full min-w-0 flex-col gap-2 rounded-lg border p-3",
+        isRunning && "border-primary bg-primary/10 ring-2 ring-primary/40",
+        isPaused && "border-primary/40 bg-primary/5",
+      )}
+    >
+      <div className="min-w-0 flex-1">
+        <p className="text-sm font-medium">{label}</p>
+        <div className="flex items-center gap-1">
+          {isPaused && editingDuration ? (
+            <Input
+              ref={durationInputRef}
+              id={durationInputId}
+              type="text"
+              inputMode="numeric"
+              className="font-heading h-9 min-w-0 flex-1 text-xl font-semibold tabular-nums"
+              value={durationDraft}
+              onChange={(event) => setDurationDraft(event.target.value)}
+              onBlur={commitDurationEdit}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  event.preventDefault()
+                  commitDurationEdit()
+                }
+                if (event.key === "Escape") {
+                  setEditingDuration(false)
+                }
+              }}
+              disabled={disabled}
+              aria-label={t("log.elapsed")}
+            />
+          ) : (
+            <>
+              <p className="font-heading text-xl font-semibold tabular-nums">
+                {formatElapsedClock(elapsedSec)}
+              </p>
+              {isPaused && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="text-muted-foreground size-8 shrink-0"
+                  onClick={beginDurationEdit}
+                  disabled={disabled}
+                  aria-label={t("common.edit")}
+                >
+                  <PencilIcon className="size-4" />
+                </Button>
+              )}
+            </>
+          )}
+        </div>
+        {state.startedAt && (
+          <p className="text-muted-foreground mt-1 text-xs tabular-nums">
+            {t("log.startTime")}: {formatTime(state.startedAt)}
+          </p>
+        )}
+      </div>
+      {state.status === "idle" ? (
+        <Button
+          type="button"
+          variant="secondary"
+          className="mt-auto w-full"
+          onClick={onStart}
+          disabled={disabled}
+        >
+          <PlayIcon data-icon="inline-start" />
+          {t("common.start")}
+        </Button>
+      ) : isRunning ? (
+        <Button
+          type="button"
+          variant="outline"
+          className="mt-auto w-full"
+          onClick={onPause}
+          disabled={disabled}
+        >
+          <PauseIcon data-icon="inline-start" />
+          {t("common.pause")}
+        </Button>
+      ) : (
+        <Button
+          type="button"
+          variant="secondary"
+          className="mt-auto w-full"
           onClick={onResume}
           disabled={disabled}
         >
@@ -465,6 +637,16 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
     )
   }
 
+  function updateNursingSideDuration(
+    sideKey: NursingSideKey,
+    elapsedSec: number,
+  ) {
+    setNursingSidesPersisted((prev) => ({
+      ...prev,
+      [sideKey]: setSideAccumulatedSec(prev[sideKey], elapsedSec),
+    }))
+  }
+
   async function handleNursingSaveAll() {
     setSubmitting(true)
     try {
@@ -691,23 +873,31 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
               </div>
               <div className="flex flex-col gap-2">
                 <Label>{t("log.sides")}</Label>
-                <div className="flex flex-col gap-2">
-                  <SideTimerRow
+                <div className="grid grid-cols-2 items-stretch gap-2">
+                  <NursingSideTimerRow
+                    sideKey="L"
                     label={t("common.left")}
                     state={nursingSides.L}
                     elapsedSec={getSideElapsedSec(nursingSides.L)}
                     onStart={() => startNursingSide("L")}
                     onPause={() => pauseNursingSide("L")}
                     onResume={() => resumeNursingSide("L")}
+                    onDurationChange={(elapsedSec) =>
+                      updateNursingSideDuration("L", elapsedSec)
+                    }
                     disabled={submitting}
                   />
-                  <SideTimerRow
+                  <NursingSideTimerRow
+                    sideKey="R"
                     label={t("common.right")}
                     state={nursingSides.R}
                     elapsedSec={getSideElapsedSec(nursingSides.R)}
                     onStart={() => startNursingSide("R")}
                     onPause={() => pauseNursingSide("R")}
                     onResume={() => resumeNursingSide("R")}
+                    onDurationChange={(elapsedSec) =>
+                      updateNursingSideDuration("R", elapsedSec)
+                    }
                     disabled={submitting}
                   />
                 </div>
@@ -891,7 +1081,7 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
                 <Label>{t("log.sides")}</Label>
-                <div className="flex flex-col gap-2">
+                <div className="grid grid-cols-2 items-stretch gap-2">
                   <SideTimerRow
                     label={t("common.left")}
                     state={pumpSides.L}
@@ -900,6 +1090,7 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
                     onPause={() => pausePumpSide("L")}
                     onResume={() => resumePumpSide("L")}
                     disabled={submitting}
+                    compact
                   />
                   <SideTimerRow
                     label={t("common.right")}
@@ -909,6 +1100,7 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
                     onPause={() => pausePumpSide("R")}
                     onResume={() => resumePumpSide("R")}
                     disabled={submitting}
+                    compact
                   />
                 </div>
               </div>

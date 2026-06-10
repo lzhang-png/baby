@@ -15,6 +15,7 @@ const zh = {
     time: "时间",
     start: "开始",
     pause: "暂停",
+    paused: "已暂停",
     resume: "继续",
     ongoing: "进行中",
     left: "左侧",

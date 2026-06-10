@@ -19,6 +19,7 @@ import {
   activitySummary,
   getOngoingConnectorAnchorAt,
   getOngoingTimelineCards,
+  isOngoingNursingFeed,
   ongoingTimelineTitle,
 } from "@/components/log/activity-label"
 import { DayActivitySummary } from "@/components/today/day-activity-summary"
@@ -477,7 +478,15 @@ export function DayTimelineSection({
     useMemo(() => {
       const timelineEvents = expandActivitiesForTimeline(activities, date)
 
-      const placed = timelineEvents.map((event) => ({
+      const ongoing = isToday
+        ? getOngoingTimelineCards(activities, date, now)
+        : []
+
+      const placed = timelineEvents
+        .filter(
+          (event) => !(isToday && isOngoingNursingFeed(event.item)),
+        )
+        .map((event) => ({
         item: event.item,
         id: event.id,
         displayAt: event.at,
@@ -486,9 +495,6 @@ export function DayTimelineSection({
         labelY: 0,
       }))
 
-      const ongoing = isToday
-        ? getOngoingTimelineCards(activities, date, now)
-        : []
       const nowAnchorY = isToday
         ? layout.getProgressPx(getNowLayoutMinutes(now))
         : null

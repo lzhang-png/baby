@@ -406,8 +406,13 @@ function OngoingNowCard({
           <p className="text-card-foreground text-sm leading-snug">
             {ongoingTimelineTitle(card.item)}
           </p>
-          <p className="text-sm leading-snug tabular-nums">
-            {formatElapsedClock(elapsedSec)}
+          <p className="flex items-baseline gap-1.5 text-sm leading-snug tabular-nums">
+            <span>{formatElapsedClock(elapsedSec)}</span>
+            {nursingState?.status === "paused" && (
+              <span className="text-muted-foreground font-normal">
+                {t("common.paused")}
+              </span>
+            )}
           </p>
         </div>
         {logPanel && panelType && (

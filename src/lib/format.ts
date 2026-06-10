@@ -59,6 +59,30 @@ export function formatElapsedClock(totalSec: number) {
   return `${pad(m)}:${pad(s)}`
 }
 
+export function parseElapsedClock(value: string): number | null {
+  const trimmed = value.trim()
+  if (!trimmed) return null
+
+  const parts = trimmed.split(":").map((part) => Number(part))
+  if (parts.some((part) => Number.isNaN(part))) return null
+
+  if (parts.length === 2) {
+    const [minutes, seconds] = parts
+    if (minutes < 0 || seconds < 0 || seconds >= 60) return null
+    return minutes * 60 + seconds
+  }
+
+  if (parts.length === 3) {
+    const [hours, minutes, seconds] = parts
+    if (hours < 0 || minutes < 0 || minutes >= 60 || seconds < 0 || seconds >= 60) {
+      return null
+    }
+    return hours * 3600 + minutes * 60 + seconds
+  }
+
+  return null
+}
+
 export function formatCompactDuration(minutes: number) {
   const h = Math.floor(minutes / 60)
   const m = minutes % 60

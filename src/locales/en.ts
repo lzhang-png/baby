@@ -15,6 +15,7 @@ const en = {
     time: "Time",
     start: "Start",
     pause: "Pause",
+    paused: "Paused",
     resume: "Resume",
     ongoing: "Ongoing",
     left: "Left",

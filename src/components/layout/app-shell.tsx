@@ -21,9 +21,15 @@ import { LogPanel, type LogPanelType } from "@/components/log/log-panel"
 import { DaySummariesPanel } from "@/components/today/day-summaries-panel"
 import { RECORDED_COLORS } from "@/components/today/recorded-events"
 import { ActivityRefreshProvider } from "@/contexts/activity-refresh-context"
+import { useAuth } from "@/contexts/auth-context"
 import { LogPanelProvider } from "@/contexts/log-panel-context"
 import { TimelineZoomProvider, useTimelineZoom } from "@/contexts/timeline-zoom-context"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import {
+  hasOngoingPumpSession,
+  usePumpTimerSession,
+} from "@/lib/pump-timer-session"
 import { Drawer, DrawerContent } from "@/components/ui/drawer"
 import {
   DropdownMenu,
@@ -105,9 +111,12 @@ function BottomFabBar({
   onSummaryOpen: () => void
 }) {
   const { t } = useTranslation()
+  const { baby } = useAuth()
   const { pathname } = useLocation()
   const isTimelinePage = isNavItemActive(pathname, "/today")
   const { zoomInEnabled, zoomOutEnabled, zoomIn, zoomOut } = useTimelineZoom()
+  const pumpSides = usePumpTimerSession(baby?.id)
+  const hasOngoingPump = hasOngoingPumpSession(pumpSides)
 
   if (logOpen || summaryOpen) return null
 
@@ -193,7 +202,12 @@ function BottomFabBar({
                 onSelect={() => onLogSelect(type)}
               >
                 <Icon aria-hidden className={cn("size-5", RECORDED_COLORS[type])} />
-                {t(labelKey)}
+                <span className="min-w-0 flex-1">{t(labelKey)}</span>
+                {type === "pump" && hasOngoingPump && (
+                  <Badge className="h-7 bg-blue-500 px-3 text-sm font-semibold text-white hover:bg-blue-500">
+                    {t("common.ongoing")}
+                  </Badge>
+                )}
               </DropdownMenuItem>
             ))}
           </DropdownMenuGroup>

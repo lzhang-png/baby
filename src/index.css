@@ -191,6 +191,15 @@
     min-width: 0;
     max-width: 100%;
     -webkit-min-logical-width: 0;
+    /* iOS Safari ignores width on native date/time controls unless appearance is reset. */
+    -webkit-appearance: none;
+    appearance: none;
+    }
+
+  /* iOS renders the value in a centered pseudo-element; align it like a text input. */
+  input::-webkit-date-and-time-value {
+    text-align: left;
+    margin: 0;
     }
 }
 

@@ -44,6 +44,17 @@ import {
   type NursingSideKey,
   type SideNursingState,
 } from "@/lib/nursing-timer-session"
+import {
+  clearPumpTimerCache,
+  getPumpSideElapsedSec,
+  INITIAL_PUMP_SIDES,
+  isPumpSideStarted,
+  pausePumpSideState,
+  readPumpTimerCache,
+  resumePumpSideState,
+  writePumpTimerCache,
+  type SidePumpState,
+} from "@/lib/pump-timer-session"
 import type { DiaperType, FeedType } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -83,7 +94,9 @@ function activateNursingSide(
   }
 }
 
-function NursingSideRow({
+type SideTimerStatus = SideNursingState["status"] | SidePumpState["status"]
+
+function SideTimerRow({
   label,
   state,
   elapsedSec,
@@ -93,7 +106,7 @@ function NursingSideRow({
   disabled,
 }: {
   label: string
-  state: SideNursingState
+  state: { status: SideTimerStatus }
   elapsedSec: number
   onStart: () => void
   onPause: () => void
@@ -238,7 +251,7 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
   const [submitting, setSubmitting] = useState(false)
 
   const [feedType, setFeedType] = useState<FeedType>("formula")
-  const [amountMl, setAmountMl] = useState("90")
+  const [amountMl, setAmountMl] = useState("")
   const [nursingSides, setNursingSides] = useState(INITIAL_NURSING_SIDES)
   const [nursingTick, setNursingTick] = useState(0)
 
@@ -256,8 +269,19 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
   const [diaperType, setDiaperType] = useState<DiaperType>("wet")
 
   const [pumpMl, setPumpMl] = useState("")
-  const [pumpLeft, setPumpLeft] = useState("15")
-  const [pumpRight, setPumpRight] = useState("15")
+  const [pumpSides, setPumpSides] = useState(INITIAL_PUMP_SIDES)
+  const [pumpTick, setPumpTick] = useState(0)
+
+  const setPumpSidesPersisted = useCallback(
+    (action: SetStateAction<Record<NursingSideKey, SidePumpState>>) => {
+      setPumpSides((prev) => {
+        const next = typeof action === "function" ? action(prev) : action
+        if (baby?.id) writePumpTimerCache(baby.id, next)
+        return next
+      })
+    },
+    [baby?.id],
+  )
 
   const [activeSleepId, setActiveSleepId] = useState<string | null>(null)
   const [sleepStartedAt, setSleepStartedAt] = useState<string | null>(null)
@@ -268,6 +292,10 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
     isSideStarted(nursingSides.L) || isSideStarted(nursingSides.R)
   const isAnyNursingSideRunning =
     nursingSides.L.status === "running" || nursingSides.R.status === "running"
+  const isPumpActive =
+    isPumpSideStarted(pumpSides.L) || isPumpSideStarted(pumpSides.R)
+  const isAnyPumpSideRunning =
+    pumpSides.L.status === "running" || pumpSides.R.status === "running"
 
   useEffect(() => {
     if (!baby?.id) {
@@ -275,12 +303,17 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
       setSleepStartedAt(null)
       setSessionsLoading(false)
       clearNursingTimerCache()
+      clearPumpTimerCache()
       setNursingSides(INITIAL_NURSING_SIDES)
+      setPumpSides(INITIAL_PUMP_SIDES)
       return
     }
 
     const cached = readNursingTimerCache(baby.id)
     if (cached) setNursingSidesPersisted(cached)
+
+    const pumpCached = readPumpTimerCache(baby.id)
+    if (pumpCached) setPumpSidesPersisted(pumpCached)
 
     let cancelled = false
     setSessionsLoading(true)
@@ -311,7 +344,15 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
     return () => {
       cancelled = true
     }
-  }, [baby?.id, version, setNursingSidesPersisted])
+  }, [baby?.id, version, setNursingSidesPersisted, setPumpSidesPersisted])
+
+  useEffect(() => {
+    if (!isAnyPumpSideRunning) return
+    const id = window.setInterval(() => {
+      setPumpTick((tick) => tick + 1)
+    }, 1000)
+    return () => window.clearInterval(id)
+  }, [isAnyPumpSideRunning])
 
   useEffect(() => {
     if (!isAnyNursingSideRunning) return
@@ -531,19 +572,73 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
     }
   }
 
-  async function handlePump(e: React.FormEvent) {
-    e.preventDefault()
+  function startPumpSide(sideKey: NursingSideKey) {
+    setPumpSidesPersisted((prev) => {
+      if (prev[sideKey].status !== "idle") return prev
+      return {
+        ...prev,
+        [sideKey]: {
+          status: "running",
+          startedAt: new Date().toISOString(),
+          accumulatedSec: 0,
+          lastResumeAt: Date.now(),
+          pausedAtMs: null,
+        },
+      }
+    })
+  }
+
+  function pausePumpSide(sideKey: NursingSideKey) {
+    setPumpSidesPersisted((prev) => ({
+      ...prev,
+      [sideKey]: pausePumpSideState(prev[sideKey]),
+    }))
+  }
+
+  function resumePumpSide(sideKey: NursingSideKey) {
+    setPumpSidesPersisted((prev) => ({
+      ...prev,
+      [sideKey]: resumePumpSideState(prev[sideKey]),
+    }))
+  }
+
+  function durationMinFromSec(seconds: number) {
+    return seconds > 0 ? Math.max(1, Math.round(seconds / 60)) : undefined
+  }
+
+  async function handlePumpSaveAll() {
     setSubmitting(true)
     try {
       const { babyId, userId } = await ensureBaby()
+      const pausedSides = {
+        L: pausePumpSideState(pumpSides.L),
+        R: pausePumpSideState(pumpSides.R),
+      }
+      const startedSides = (["L", "R"] as const).filter((sideKey) =>
+        isPumpSideStarted(pausedSides[sideKey]),
+      )
+      if (startedSides.length === 0) {
+        throw new Error(t("log.startOneSide"))
+      }
+
+      const leftSec = getPumpSideElapsedSec(pausedSides.L)
+      const rightSec = getPumpSideElapsedSec(pausedSides.R)
+      const startedAts = startedSides
+        .map((sideKey) => pausedSides[sideKey].startedAt)
+        .filter((value): value is string => value != null)
+        .sort()
+
       await insertPump({
         babyId,
         userId,
-        occurredAt: occurredAt(),
+        occurredAt: startedAts[0] ?? new Date().toISOString(),
         amountMl: pumpMl ? Number(pumpMl) : undefined,
-        durationLeftMin: Number(pumpLeft) || undefined,
-        durationRightMin: Number(pumpRight) || undefined,
+        durationLeftMin: durationMinFromSec(leftSec),
+        durationRightMin: durationMinFromSec(rightSec),
       })
+
+      clearPumpTimerCache()
+      setPumpSidesPersisted(INITIAL_PUMP_SIDES)
       toast.success(t("log.pumpLogged"))
       afterSuccess()
     } catch (err) {
@@ -554,6 +649,7 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
   }
 
   void nursingTick
+  void pumpTick
 
   return (
     <DrawerHandle className="min-w-0 flex-col">
@@ -596,7 +692,7 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
               <div className="flex flex-col gap-2">
                 <Label>{t("log.sides")}</Label>
                 <div className="flex flex-col gap-2">
-                  <NursingSideRow
+                  <SideTimerRow
                     label={t("common.left")}
                     state={nursingSides.L}
                     elapsedSec={getSideElapsedSec(nursingSides.L)}
@@ -605,7 +701,7 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
                     onResume={() => resumeNursingSide("L")}
                     disabled={submitting}
                   />
-                  <NursingSideRow
+                  <SideTimerRow
                     label={t("common.right")}
                     state={nursingSides.R}
                     elapsedSec={getSideElapsedSec(nursingSides.R)}
@@ -792,14 +888,30 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
 
         {type === "pump" && (
         <LogSection title={t("log.pumping")}>
-            <form onSubmit={handlePump} className="flex flex-col gap-4">
-              <LogDateTimeFields
-                idPrefix="pump"
-                date={logDate}
-                time={logTime}
-                onDateChange={setLogDate}
-                onTimeChange={setLogTime}
-              />
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label>{t("log.sides")}</Label>
+                <div className="flex flex-col gap-2">
+                  <SideTimerRow
+                    label={t("common.left")}
+                    state={pumpSides.L}
+                    elapsedSec={getPumpSideElapsedSec(pumpSides.L)}
+                    onStart={() => startPumpSide("L")}
+                    onPause={() => pausePumpSide("L")}
+                    onResume={() => resumePumpSide("L")}
+                    disabled={submitting}
+                  />
+                  <SideTimerRow
+                    label={t("common.right")}
+                    state={pumpSides.R}
+                    elapsedSec={getPumpSideElapsedSec(pumpSides.R)}
+                    onStart={() => startPumpSide("R")}
+                    onPause={() => pausePumpSide("R")}
+                    onResume={() => resumePumpSide("R")}
+                    disabled={submitting}
+                  />
+                </div>
+              </div>
               <div className="flex flex-col gap-2">
                 <Label htmlFor="pump-ml">{t("log.amountMlOptional")}</Label>
                 <Input
@@ -810,37 +922,18 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
                   onChange={(e) => setPumpMl(e.target.value)}
                 />
               </div>
-              <div className="grid min-w-0 grid-cols-2 gap-3">
-                <div className="flex min-w-0 flex-col gap-2">
-                  <Label htmlFor="pump-l">{t("log.leftMin")}</Label>
-                  <Input
-                    id="pump-l"
-                    type="number"
-                    min={0}
-                    value={pumpLeft}
-                    onChange={(e) => setPumpLeft(e.target.value)}
-                  />
-                </div>
-                <div className="flex min-w-0 flex-col gap-2">
-                  <Label htmlFor="pump-r">{t("log.rightMin")}</Label>
-                  <Input
-                    id="pump-r"
-                    type="number"
-                    min={0}
-                    value={pumpRight}
-                    onChange={(e) => setPumpRight(e.target.value)}
-                  />
-                </div>
-              </div>
-              <Button
-                type="submit"
-                variant="secondary"
-                className={LOG_SUBMIT_CLASS}
-                disabled={submitting}
-              >
-                {t("log.logPump")}
-              </Button>
-            </form>
+              {isPumpActive && (
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className={LOG_SUBMIT_CLASS}
+                  onClick={handlePumpSaveAll}
+                  disabled={submitting}
+                >
+                  {t("log.stopAndSave")}
+                </Button>
+              )}
+            </div>
         </LogSection>
         )}
       </AnimatedHeight>

@@ -5,19 +5,25 @@ import {
   formatTime,
   isSameDay,
 } from "@/lib/format"
+import {
+  getNursingSideStateForFeed,
+  getSideElapsedSec,
+  type NursingSideKey,
+  type SideNursingState,
+} from "@/lib/nursing-timer-session"
 import type { ActivityItem, FeedLog, SleepLog } from "@/lib/types"
 import {
   getSleepDurationMinutes,
   type SleepTimelinePhase,
 } from "@/lib/sleep-timeline"
 
-function feedTypeLabel(type: string) {
+export function feedTypeLabel(type: string) {
   const key = `log.${type}` as const
   const translated = i18n.t(key)
   return translated === key ? type : translated
 }
 
-function diaperTypeLabel(type: string) {
+export function diaperTypeLabel(type: string) {
   const key = `log.${type}` as const
   const translated = i18n.t(key)
   return translated === key ? type : translated
@@ -155,4 +161,56 @@ export function ongoingTimelineLabel(item: ActivityItem, now: Date): string {
   if (item.kind === "sleep") return ongoingSleepLabel(item.data, now)
   if (item.kind === "feed") return ongoingNursingLabel(item.data, now)
   return ""
+}
+
+export function ongoingTimelineTitle(item: ActivityItem): string {
+  if (item.kind === "sleep") return i18n.t("activity.sleeping")
+  if (item.kind === "feed") {
+    const feed = item.data
+    if (feed.side === "L") return i18n.t("activity.nursingOnLeft")
+    if (feed.side === "R") return i18n.t("activity.nursingOnRight")
+    return i18n.t("log.nursing")
+  }
+  return ""
+}
+
+export function getOngoingElapsedSec(
+  item: ActivityItem,
+  now: Date,
+  nursingSides?: Record<NursingSideKey, SideNursingState> | null,
+): number {
+  if (item.kind === "sleep") {
+    const startMs = new Date(item.data.started_at).getTime()
+    return Math.max(0, Math.floor((now.getTime() - startMs) / 1000))
+  }
+
+  if (item.kind === "feed") {
+    const feed = item.data
+    if (feed.side === "L" || feed.side === "R") {
+      const state = getNursingSideStateForFeed(nursingSides, feed.id, feed.side)
+      if (state) return getSideElapsedSec(state)
+    }
+    const startMs = new Date(feed.occurred_at).getTime()
+    return Math.max(0, Math.floor((now.getTime() - startMs) / 1000))
+  }
+
+  return 0
+}
+
+/** When paused, freeze the timeline connector at the pause moment. */
+export function getOngoingConnectorAnchorAt(
+  item: ActivityItem,
+  nursingSides?: Record<NursingSideKey, SideNursingState> | null,
+): Date | null {
+  if (item.kind !== "feed") return null
+
+  const feed = item.data
+  if (feed.side !== "L" && feed.side !== "R") return null
+
+  const state = getNursingSideStateForFeed(nursingSides, feed.id, feed.side)
+  if (state?.status === "paused" && state.pausedAtMs) {
+    return new Date(state.pausedAtMs)
+  }
+
+  return null
 }

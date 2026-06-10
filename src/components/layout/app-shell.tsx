@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { NavLink, Outlet, useLocation } from "react-router-dom"
 import {
@@ -21,6 +21,7 @@ import { LogPanel, type LogPanelType } from "@/components/log/log-panel"
 import { DaySummariesPanel } from "@/components/today/day-summaries-panel"
 import { RECORDED_COLORS } from "@/components/today/recorded-events"
 import { ActivityRefreshProvider } from "@/contexts/activity-refresh-context"
+import { LogPanelProvider } from "@/contexts/log-panel-context"
 import { TimelineZoomProvider, useTimelineZoom } from "@/contexts/timeline-zoom-context"
 import { Button } from "@/components/ui/button"
 import { Drawer, DrawerContent } from "@/components/ui/drawer"
@@ -208,9 +209,13 @@ export function AppShell() {
   const logOpen = logPanelType !== null
   const { pathname } = useLocation()
   const isTimelinePage = isNavItemActive(pathname, "/today")
+  const openLogPanel = useCallback((type: LogPanelType) => {
+    setLogPanelType(type)
+  }, [])
 
   return (
     <ActivityRefreshProvider>
+      <LogPanelProvider openLogPanel={openLogPanel}>
       <TimelineZoomProvider>
       <div className="bg-background flex h-svh flex-col overflow-hidden">
       <main className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col">
@@ -265,6 +270,7 @@ export function AppShell() {
       </Drawer>
       </div>
       </TimelineZoomProvider>
+      </LogPanelProvider>
     </ActivityRefreshProvider>
   )
 }

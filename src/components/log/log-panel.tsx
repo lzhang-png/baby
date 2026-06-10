@@ -1,10 +1,13 @@
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState, type SetStateAction } from "react"
 import { useTranslation } from "react-i18next"
 import {
   BlendIcon,
   DropletOffIcon,
   DropletsIcon,
+  Loader2Icon,
   MilkIcon,
+  PauseIcon,
+  PlayIcon,
   ToiletIcon,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -29,7 +32,19 @@ import {
   toDateInputValue,
   toTimeInputValue,
 } from "@/lib/format"
-import type { DiaperType, FeedType, NursingSide } from "@/lib/types"
+import {
+  clearNursingTimerCache,
+  getSideElapsedSec,
+  INITIAL_NURSING_SIDES,
+  mergeNursingSidesFromServer,
+  pauseSideState,
+  readNursingTimerCache,
+  resumeSideState,
+  writeNursingTimerCache,
+  type NursingSideKey,
+  type SideNursingState,
+} from "@/lib/nursing-timer-session"
+import type { DiaperType, FeedType } from "@/lib/types"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -47,74 +62,25 @@ type LogPanelProps = {
 
 const LOG_SUBMIT_CLASS = "h-10 w-full"
 
-type NursingSideKey = Exclude<NursingSide, "both">
-
-type SideNursingState = {
-  status: "idle" | "running" | "paused"
-  startedAt: string | null
-  accumulatedSec: number
-  lastResumeAt: number | null
-  feedId: string | null
-}
-
-const INITIAL_SIDE_NURSING_STATE: SideNursingState = {
-  status: "idle",
-  startedAt: null,
-  accumulatedSec: 0,
-  lastResumeAt: null,
-  feedId: null,
-}
-
-const INITIAL_NURSING_SIDES: Record<NursingSideKey, SideNursingState> = {
-  L: { ...INITIAL_SIDE_NURSING_STATE },
-  R: { ...INITIAL_SIDE_NURSING_STATE },
-}
-
-function getSideElapsedSec(state: SideNursingState) {
-  if (state.status === "running" && state.lastResumeAt) {
-    return (
-      state.accumulatedSec +
-      Math.floor((Date.now() - state.lastResumeAt) / 1000)
-    )
-  }
-  return state.accumulatedSec
-}
-
-function pauseSideState(state: SideNursingState): SideNursingState {
-  if (state.status !== "running" || !state.lastResumeAt) return state
-  return {
-    ...state,
-    status: "paused",
-    accumulatedSec:
-      state.accumulatedSec +
-      Math.floor((Date.now() - state.lastResumeAt) / 1000),
-    lastResumeAt: null,
-  }
-}
-
-function resumeSideState(state: SideNursingState): SideNursingState {
-  return {
-    ...state,
-    status: "running",
-    lastResumeAt: Date.now(),
-  }
-}
-
-function feedToSideState(feed: {
-  id: string
-  occurred_at: string
-}): SideNursingState {
-  return {
-    status: "running",
-    startedAt: feed.occurred_at,
-    accumulatedSec: 0,
-    lastResumeAt: new Date(feed.occurred_at).getTime(),
-    feedId: feed.id,
-  }
-}
-
 function isSideStarted(state: SideNursingState) {
   return state.status !== "idle"
+}
+
+function otherNursingSide(sideKey: NursingSideKey): NursingSideKey {
+  return sideKey === "L" ? "R" : "L"
+}
+
+function activateNursingSide(
+  prev: Record<NursingSideKey, SideNursingState>,
+  sideKey: NursingSideKey,
+  nextActive: SideNursingState,
+): Record<NursingSideKey, SideNursingState> {
+  const otherKey = otherNursingSide(sideKey)
+  return {
+    ...prev,
+    [otherKey]: pauseSideState(prev[otherKey]),
+    [sideKey]: nextActive,
+  }
 }
 
 function NursingSideRow({
@@ -159,6 +125,7 @@ function NursingSideRow({
           onClick={onStart}
           disabled={disabled}
         >
+          <PlayIcon data-icon="inline-start" />
           {t("common.start")}
         </Button>
       ) : isRunning ? (
@@ -168,6 +135,7 @@ function NursingSideRow({
           onClick={onPause}
           disabled={disabled}
         >
+          <PauseIcon data-icon="inline-start" />
           {t("common.pause")}
         </Button>
       ) : (
@@ -177,6 +145,7 @@ function NursingSideRow({
           onClick={onResume}
           disabled={disabled}
         >
+          <PlayIcon data-icon="inline-start" />
           {t("common.resume")}
         </Button>
       )}
@@ -273,6 +242,17 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
   const [nursingSides, setNursingSides] = useState(INITIAL_NURSING_SIDES)
   const [nursingTick, setNursingTick] = useState(0)
 
+  const setNursingSidesPersisted = useCallback(
+    (action: SetStateAction<Record<NursingSideKey, SideNursingState>>) => {
+      setNursingSides((prev) => {
+        const next = typeof action === "function" ? action(prev) : action
+        if (baby?.id) writeNursingTimerCache(baby.id, next)
+        return next
+      })
+    },
+    [baby?.id],
+  )
+
   const [diaperType, setDiaperType] = useState<DiaperType>("wet")
 
   const [pumpMl, setPumpMl] = useState("")
@@ -282,6 +262,7 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
   const [activeSleepId, setActiveSleepId] = useState<string | null>(null)
   const [sleepStartedAt, setSleepStartedAt] = useState<string | null>(null)
   const [sleepElapsedSec, setSleepElapsedSec] = useState(0)
+  const [sessionsLoading, setSessionsLoading] = useState(true)
 
   const isNursingActive =
     isSideStarted(nursingSides.L) || isSideStarted(nursingSides.R)
@@ -292,23 +273,28 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
     if (!baby?.id) {
       setActiveSleepId(null)
       setSleepStartedAt(null)
+      setSessionsLoading(false)
+      clearNursingTimerCache()
       setNursingSides(INITIAL_NURSING_SIDES)
       return
     }
+
+    const cached = readNursingTimerCache(baby.id)
+    if (cached) setNursingSidesPersisted(cached)
+
     let cancelled = false
-    Promise.all([getActiveSleep(baby.id), getActiveNursingSessions(baby.id)]).then(
-      ([activeSleep, activeNursingSessions]) => {
+    setSessionsLoading(true)
+    Promise.all([getActiveSleep(baby.id), getActiveNursingSessions(baby.id)])
+      .then(([activeSleep, activeNursingSessions]) => {
         if (cancelled) return
         setActiveSleepId(activeSleep?.id ?? null)
         setSleepStartedAt(activeSleep?.started_at ?? null)
 
-        const nextSides = { ...INITIAL_NURSING_SIDES }
-        for (const feed of activeNursingSessions) {
-          if (feed.side === "L" || feed.side === "R") {
-            nextSides[feed.side] = feedToSideState(feed)
-          }
-        }
-        setNursingSides(nextSides)
+        const seed =
+          readNursingTimerCache(baby.id) ?? INITIAL_NURSING_SIDES
+        setNursingSidesPersisted(
+          mergeNursingSidesFromServer(seed, activeNursingSessions),
+        )
 
         if (activeNursingSessions.length > 0) {
           setFeedType("nursing")
@@ -318,12 +304,14 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
           setLogDate(toDateInputValue())
           setLogTime(toTimeInputValue())
         }
-      },
-    )
+      })
+      .finally(() => {
+        if (!cancelled) setSessionsLoading(false)
+      })
     return () => {
       cancelled = true
     }
-  }, [baby?.id, version])
+  }, [baby?.id, version, setNursingSidesPersisted])
 
   useEffect(() => {
     if (!isAnyNursingSideRunning) return
@@ -402,21 +390,20 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
         feedType: "nursing",
         side: sideKey,
       })
-      setNursingSides((prev) => ({
-        ...prev,
-        [sideKey]: {
+      setNursingSidesPersisted((prev) =>
+        activateNursingSide(prev, sideKey, {
           status: "running",
           startedAt: log.occurred_at,
           accumulatedSec: 0,
           lastResumeAt: Date.now(),
           feedId: log.id,
-        },
-      }))
+          pausedAtMs: null,
+        }),
+      )
       toast.success(
         sideKey === "L" ? t("log.leftSideStarted") : t("log.rightSideStarted"),
       )
       notifyActivityChanged()
-      onLogged?.()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t("log.startSideFailed"))
     } finally {
@@ -425,24 +412,23 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
   }
 
   function pauseNursingSide(sideKey: NursingSideKey) {
-    setNursingSides((prev) => ({
+    setNursingSidesPersisted((prev) => ({
       ...prev,
       [sideKey]: pauseSideState(prev[sideKey]),
     }))
   }
 
   function resumeNursingSide(sideKey: NursingSideKey) {
-    setNursingSides((prev) => ({
-      ...prev,
-      [sideKey]: resumeSideState(prev[sideKey]),
-    }))
+    setNursingSidesPersisted((prev) =>
+      activateNursingSide(prev, sideKey, resumeSideState(prev[sideKey])),
+    )
   }
 
   async function handleNursingSaveAll() {
     setSubmitting(true)
     try {
       await ensureBaby()
-      const endedAt = occurredAt()
+      const endedAt = new Date().toISOString()
       const pausedSides = {
         L: pauseSideState(nursingSides.L),
         R: pauseSideState(nursingSides.R),
@@ -468,7 +454,8 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
         }),
       )
 
-      setNursingSides(INITIAL_NURSING_SIDES)
+      clearNursingTimerCache()
+      setNursingSidesPersisted(INITIAL_NURSING_SIDES)
       toast.success(
         startedSides.length === 2
           ? t("log.bothSidesSaved")
@@ -512,7 +499,7 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
         sleepId = active?.id ?? null
       }
       if (!sleepId) throw new Error("No active sleep to end")
-      await endSleep(sleepId, occurredAt())
+      await endSleep(sleepId, new Date().toISOString())
       setActiveSleepId(null)
       setSleepStartedAt(null)
       toast.success(t("log.sleepEnded"))
@@ -630,17 +617,6 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
                 </div>
               </div>
               {isNursingActive && (
-                <LogDateTimeFields
-                  idPrefix="feed"
-                  date={logDate}
-                  time={logTime}
-                  onDateChange={setLogDate}
-                  onTimeChange={setLogTime}
-                  dateLabel={t("log.endDate")}
-                  timeLabel={t("log.endTime")}
-                />
-              )}
-              {isNursingActive && (
                 <Button
                   type="button"
                   variant="secondary"
@@ -713,50 +689,48 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
 
         {type === "sleep" && (
         <LogSection title={t("log.sleep")}>
-            {activeSleepId ? (
+            {sessionsLoading ? (
+              <div
+                className="text-muted-foreground flex justify-center py-8"
+                role="status"
+                aria-live="polite"
+              >
+                <Loader2Icon className="size-6 animate-spin" aria-hidden />
+              </div>
+            ) : activeSleepId ? (
               <>
                 <ElapsedTimer elapsedSec={sleepElapsedSec} />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className={LOG_SUBMIT_CLASS}
+                  onClick={handleSleepEnd}
+                  disabled={submitting}
+                >
+                  {t("log.endSleep")}
+                </Button>
+              </>
+            ) : (
+              <>
                 <LogDateTimeFields
                   idPrefix="sleep"
                   date={logDate}
                   time={logTime}
                   onDateChange={setLogDate}
                   onTimeChange={setLogTime}
-                  dateLabel={t("log.endDate")}
-                  timeLabel={t("log.endTime")}
+                  dateLabel={t("log.startDate")}
+                  timeLabel={t("log.startTime")}
                 />
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className={LOG_SUBMIT_CLASS}
+                  onClick={handleSleepStart}
+                  disabled={submitting}
+                >
+                  {t("log.startSleeping")}
+                </Button>
               </>
-            ) : (
-              <LogDateTimeFields
-                idPrefix="sleep"
-                date={logDate}
-                time={logTime}
-                onDateChange={setLogDate}
-                onTimeChange={setLogTime}
-                dateLabel={t("log.startDate")}
-                timeLabel={t("log.startTime")}
-              />
-            )}
-            {activeSleepId ? (
-              <Button
-                type="button"
-                variant="secondary"
-                className={LOG_SUBMIT_CLASS}
-                onClick={handleSleepEnd}
-                disabled={submitting}
-              >
-                {t("log.endSleep")}
-              </Button>
-            ) : (
-              <Button
-                type="button"
-                variant="secondary"
-                className={LOG_SUBMIT_CLASS}
-                onClick={handleSleepStart}
-                disabled={submitting}
-              >
-                {t("log.startSleeping")}
-              </Button>
             )}
         </LogSection>
         )}

@@ -17,8 +17,9 @@ import {
 
 import {
   activitySummary,
+  getOngoingConnectorAnchorAt,
   getOngoingTimelineCards,
-  ongoingTimelineLabel,
+  ongoingTimelineTitle,
 } from "@/components/log/activity-label"
 import { DayActivitySummary } from "@/components/today/day-activity-summary"
 import { buildDayActivitySummary } from "@/lib/day-activity-summary"
@@ -58,6 +59,7 @@ import {
   DEFAULT_RECORDED_LABEL_EDGE_GAP_PX,
   spreadLabelPositions,
 } from "@/lib/schedule-utils"
+import { useNursingTimerSession } from "@/lib/nursing-timer-session"
 import { cn } from "@/lib/utils"
 
 type CheckpointIconKind = ActivityKind | "bath"
@@ -77,7 +79,7 @@ const NOW_LINE_START_OFFSET_PX = 64 // px-1 + w-14 timestamp clearance
 const SCHEDULE_GRID =
   "grid-cols-[minmax(0,1fr)_1.25rem] gap-x-2"
 
-const DAY_SUMMARY_FIRST_LINE_HEIGHT_PX = 32
+const DAY_SUMMARY_FIRST_LINE_HEIGHT_PX = 18
 const DAY_SUMMARY_VERTICAL_OFFSET_PX = -2
 const DAY_SUMMARY_BOTTOM_PADDING_PX = 12
 const DAY_SUMMARY_CARD_GAP_PX = 8
@@ -91,9 +93,9 @@ function getEstimatedDaySummaryBandHeight(activities: ActivityItem[]): number {
   if (!segments?.length) return 0
 
   const rowHeight = getScaledPx(DAY_SUMMARY_FIRST_LINE_HEIGHT_PX)
-  const rowGap = getScaledPx(4)
-  const rows = Math.ceil(segments.length / 3)
-  const contentHeight = rows * rowHeight + Math.max(0, rows - 1) * rowGap
+  const rowGap = getScaledPx(8)
+  const contentHeight =
+    segments.length * rowHeight + Math.max(0, segments.length - 1) * rowGap
 
   return contentHeight + getScaledPx(DAY_SUMMARY_BOTTOM_PADDING_PX)
 }
@@ -360,6 +362,7 @@ export function DayTimelineSection({
     [],
   )
   const textSizeVersion = useTextSizeVersion()
+  const nursingSides = useNursingTimerSession(babyId)
 
   const isToday = isSameDay(date, now)
   const isPastDay = startOfDay(date) < startOfDay(now)
@@ -465,7 +468,12 @@ export function DayTimelineSection({
   const daySummaryMinLabelY = getDaySummaryMinLabelY(daySummaryBottom)
   const daySummaryMaxLabelY = getDaySummaryMaxLabelY(layout.height)
 
-  const { recordedEvents, ongoingTimelineCards, ongoingCardLabelYs } =
+  const {
+    recordedEvents,
+    ongoingTimelineCards,
+    ongoingCardLabelYs,
+    ongoingConnectorAnchorYs,
+  } =
     useMemo(() => {
       const timelineEvents = expandActivitiesForTimeline(activities, date)
 
@@ -485,11 +493,22 @@ export function DayTimelineSection({
         ? layout.getProgressPx(getNowLayoutMinutes(now))
         : null
 
+      const ongoingAnchorYs =
+        nowAnchorY != null
+          ? ongoing.map((card) => {
+              const frozenAt = getOngoingConnectorAnchorAt(
+                card.item,
+                nursingSides,
+              )
+              return frozenAt
+                ? layout.getProgressPx(getNowLayoutMinutes(frozenAt))
+                : nowAnchorY
+            })
+          : []
+
       const preferredYs = [
         ...placed.map((event) => event.anchorY),
-        ...(nowAnchorY != null
-          ? ongoing.map(() => nowAnchorY)
-          : []),
+        ...ongoingAnchorYs,
       ]
 
       const defaultCardHeight = getScaledLogCardHeightPx(
@@ -523,7 +542,7 @@ export function DayTimelineSection({
               (card) =>
                 measuredCardHeights[card.id] ??
                 estimateRecordedCardHeightPx(
-                  ongoingTimelineLabel(card.item, now),
+                  `${ongoingTimelineTitle(card.item)}\n00:00`,
                   cardWidth,
                   false,
                   fontFamily,
@@ -550,6 +569,7 @@ export function DayTimelineSection({
         ongoingCardLabelYs: ongoing.map(
           (_, index) => labelYs[placed.length + index],
         ),
+        ongoingConnectorAnchorYs: ongoingAnchorYs,
       }
     }, [
       activities,
@@ -563,6 +583,7 @@ export function DayTimelineSection({
       textSizeVersion,
       connectorMetrics.cardWidth,
       measuredCardHeights,
+      nursingSides,
     ])
 
   useEffect(() => {
@@ -602,8 +623,8 @@ export function DayTimelineSection({
           ongoingConnectors={ongoingTimelineCards.map((card, index) => ({
             id: card.id,
             labelY: ongoingCardLabelYs[index],
+            anchorY: ongoingConnectorAnchorYs[index],
           }))}
-          nowAnchorY={nowPositionY}
           barX={connectorMetrics.barX}
           trunkX={connectorMetrics.trunkX}
           cardLeftX={connectorMetrics.cardLeftX}
@@ -798,6 +819,7 @@ export function DayTimelineSection({
               cards={ongoingTimelineCards}
               labelYs={ongoingCardLabelYs}
               now={now}
+              nursingSides={nursingSides}
               onCardHeightChange={handleCardHeightChange}
             />
           </div>

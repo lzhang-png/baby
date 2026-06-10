@@ -31,7 +31,7 @@ export function DayActivitySummary({
   return (
     <div
       className={cn(
-        "flex flex-wrap items-center gap-x-3 gap-y-1 text-base leading-snug font-medium",
+        "flex flex-col gap-y-2 text-sm leading-tight font-normal",
         className,
       )}
       style={style}
@@ -39,16 +39,25 @@ export function DayActivitySummary({
       {segments.map((segment) => {
         const Icon = RECORDED_ICONS[segment.kind]
         return (
-          <span
+          <div
             key={segment.kind}
-            className="text-foreground/90 inline-flex items-center gap-1.5"
+            className="flex w-full items-start gap-3"
           >
             <Icon
               aria-hidden
-              className={cn("size-4.5 shrink-0", RECORDED_COLORS[segment.kind])}
+              className={cn("size-3.5 shrink-0", RECORDED_COLORS[segment.kind])}
             />
-            <span>{segment.text}</span>
-          </span>
+            <p className="-translate-y-0.5 flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5">
+              {segment.subSegments.map((subSegment) => (
+                <span
+                  key={subSegment.key}
+                  className="inline-flex items-center whitespace-nowrap"
+                >
+                  {subSegment.text}
+                </span>
+              ))}
+            </p>
+          </div>
         )
       })}
     </div>

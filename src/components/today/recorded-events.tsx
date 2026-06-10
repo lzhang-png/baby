@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 import {
   BlendIcon,
+  ChevronRightIcon,
   DropletsIcon,
   DropletOffIcon,
   EllipsisVerticalIcon,
@@ -21,7 +22,8 @@ import { EditLogDrawer } from "@/components/log/edit-log-drawer"
 import {
   activitySummary,
   activityTime,
-  ongoingTimelineLabel,
+  getOngoingElapsedSec,
+  ongoingTimelineTitle,
   type OngoingTimelineCard,
 } from "@/components/log/activity-label"
 import { Button } from "@/components/ui/button"
@@ -32,6 +34,14 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { useActivityRefresh } from "@/contexts/activity-refresh-context"
+import { useLogPanel } from "@/contexts/log-panel-context"
+import type { LogPanelType } from "@/components/log/log-panel"
+import { formatElapsedClock } from "@/lib/format"
+import {
+  getNursingSideStateForFeed,
+  type NursingSideKey,
+  type SideNursingState,
+} from "@/lib/nursing-timer-session"
 import { deleteActivity } from "@/lib/api/logs"
 import { isEditableActivity } from "@/lib/activity-utils"
 import type { SleepTimelinePhase } from "@/lib/sleep-timeline"
@@ -314,22 +324,58 @@ type OngoingNowCardsProps = {
   cards: OngoingTimelineCard[]
   labelYs: number[]
   now: Date
+  nursingSides?: Record<NursingSideKey, SideNursingState> | null
   onCardHeightChange?: CardHeightChangeHandler
+}
+
+function logPanelTypeForOngoingItem(item: ActivityItem): LogPanelType | null {
+  if (item.kind === "sleep") return "sleep"
+  if (item.kind === "feed") return "feed"
+  return null
 }
 
 function OngoingNowCard({
   card,
   labelY,
   liveNow,
+  nursingSides,
   onHeightChange,
 }: {
   card: OngoingTimelineCard
   labelY: number
   liveNow: Date
+  nursingSides?: Record<NursingSideKey, SideNursingState> | null
   onHeightChange?: CardHeightChangeHandler
 }) {
+  const { t } = useTranslation()
+  const logPanel = useLogPanel()
   const cardRef = useCardHeightReport(card.id, onHeightChange)
   const Icon = getRecordedIcon(card.item)
+  const panelType = logPanelTypeForOngoingItem(card.item)
+  const elapsedSec = getOngoingElapsedSec(card.item, liveNow, nursingSides)
+  const nursingState =
+    card.item.kind === "feed" &&
+    (card.item.data.side === "L" || card.item.data.side === "R")
+      ? getNursingSideStateForFeed(
+          nursingSides,
+          card.item.data.id,
+          card.item.data.side,
+        )
+      : null
+  const isPulsing =
+    card.item.kind === "sleep" ||
+    (card.item.kind === "feed" && nursingState?.status !== "paused")
+
+  function handleOpenLogPanel() {
+    if (!logPanel || !panelType) return
+    logPanel.openLogPanel(panelType)
+  }
+
+  function handleKeyDown(event: React.KeyboardEvent) {
+    if (event.key !== "Enter" && event.key !== " ") return
+    event.preventDefault()
+    handleOpenLogPanel()
+  }
 
   return (
     <div
@@ -338,8 +384,17 @@ function OngoingNowCard({
     >
       <div
         ref={cardRef}
+        role="button"
+        tabIndex={logPanel && panelType ? 0 : undefined}
+        aria-label={t("log.openOngoingLog")}
+        onClick={handleOpenLogPanel}
+        onKeyDown={handleKeyDown}
         className={cn(
-          "ongoing-card-pulse flex w-full items-center gap-2 rounded-lg p-2 shadow-sm",
+          "bg-card flex w-full items-center gap-2 rounded-lg p-2 shadow-sm",
+          isPulsing && "ongoing-card-pulse",
+          logPanel &&
+            panelType &&
+            "cursor-pointer transition-opacity hover:opacity-90",
           EVENT_CARD_MAX_WIDTH,
         )}
       >
@@ -348,10 +403,18 @@ function OngoingNowCard({
           className={cn("size-3.5 shrink-0", RECORDED_COLORS[card.item.kind])}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-card-foreground text-xs leading-snug">
-            {ongoingTimelineLabel(card.item, liveNow)}
+          <p className="text-card-foreground text-sm leading-snug">
+            {ongoingTimelineTitle(card.item)}
+          </p>
+          <p className="text-sm leading-snug tabular-nums">
+            {formatElapsedClock(elapsedSec)}
           </p>
         </div>
+        {logPanel && panelType && (
+          <span className="text-muted-foreground flex size-8 shrink-0 items-center justify-center">
+            <ChevronRightIcon className="size-4.5" aria-hidden />
+          </span>
+        )}
       </div>
     </div>
   )
@@ -361,6 +424,7 @@ export function OngoingNowCards({
   cards,
   labelYs,
   now,
+  nursingSides,
   onCardHeightChange,
 }: OngoingNowCardsProps) {
   const [liveNow, setLiveNow] = useState(now)
@@ -385,6 +449,7 @@ export function OngoingNowCards({
           card={card}
           labelY={labelYs[index]}
           liveNow={liveNow}
+          nursingSides={nursingSides}
           onHeightChange={onCardHeightChange}
         />
       ))}
@@ -395,6 +460,7 @@ export function OngoingNowCards({
 export type OngoingConnector = {
   id: string
   labelY: number
+  anchorY: number
 }
 
 function ConnectorLinePath({
@@ -432,7 +498,6 @@ function ConnectorLinePath({
 export function RecordedEventConnectors({
   events,
   ongoingConnectors = [],
-  nowAnchorY = null,
   barX,
   trunkX,
   cardLeftX,
@@ -440,14 +505,12 @@ export function RecordedEventConnectors({
 }: {
   events: PlacedActivity[]
   ongoingConnectors?: OngoingConnector[]
-  nowAnchorY?: number | null
   barX: number
   trunkX: number
   cardLeftX: number
   className?: string
 }) {
-  const hasOngoingConnectors =
-    nowAnchorY != null && ongoingConnectors.length > 0
+  const hasOngoingConnectors = ongoingConnectors.length > 0
 
   return (
     <svg
@@ -476,28 +539,37 @@ export function RecordedEventConnectors({
           />
         )
       })}
-      {hasOngoingConnectors &&
-        ongoingConnectors.map(({ id, labelY }, index) => {
-          const pathD = buildRoundedConnectorPath(
-            barX,
-            nowAnchorY!,
-            trunkX,
-            labelY,
-            cardLeftX,
-          )
-          const isBelowAnotherLine = index < ongoingConnectors.length - 1
+      {ongoingConnectors.map(({ id, labelY, anchorY }, index) => {
+        const pathD = buildRoundedConnectorPath(
+          barX,
+          anchorY,
+          trunkX,
+          labelY,
+          cardLeftX,
+        )
+        const isBelowAnotherLine = index < ongoingConnectors.length - 1
 
-          return (
-            <ConnectorLinePath
-              key={`${id}-ongoing-line`}
-              pathD={pathD}
-              showShadow={isBelowAnotherLine}
-            />
-          )
-        })}
+        return (
+          <ConnectorLinePath
+            key={`${id}-ongoing-line`}
+            pathD={pathD}
+            showShadow={isBelowAnotherLine}
+          />
+        )
+      })}
       {events.map(({ id, anchorY }) => (
         <circle
           key={`${id}-dot`}
+          cx={barX}
+          cy={anchorY}
+          r={3}
+          className="fill-primary stroke-black"
+          strokeWidth={1}
+        />
+      ))}
+      {ongoingConnectors.map(({ id, anchorY }) => (
+        <circle
+          key={`${id}-ongoing-dot`}
           cx={barX}
           cy={anchorY}
           r={3}

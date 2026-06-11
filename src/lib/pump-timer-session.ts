@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react"
 
 import type { NursingSideKey } from "@/lib/nursing-timer-session"
+import { safeGetItem, safeRemoveItem, safeSetItem } from "@/lib/safe-storage"
 
 export type SidePumpState = {
   status: "idle" | "running" | "paused"
@@ -23,12 +24,72 @@ export const INITIAL_PUMP_SIDES: Record<NursingSideKey, SidePumpState> = {
   R: { ...INITIAL_SIDE_PUMP_STATE },
 }
 
+const STORAGE_KEY_PREFIX = "baby-pump-timer:"
+
 let pumpTimerCache: {
   babyId: string
   sides: Record<NursingSideKey, SidePumpState>
 } | null = null
 
 const listeners = new Set<() => void>()
+
+function storageKey(babyId: string) {
+  return `${STORAGE_KEY_PREFIX}${babyId}`
+}
+
+function isSidePumpState(value: unknown): value is SidePumpState {
+  if (!value || typeof value !== "object") return false
+
+  const state = value as SidePumpState
+  return (
+    (state.status === "idle" ||
+      state.status === "running" ||
+      state.status === "paused") &&
+    (state.startedAt === null || typeof state.startedAt === "string") &&
+    typeof state.accumulatedSec === "number" &&
+    (state.lastResumeAt === null || typeof state.lastResumeAt === "number") &&
+    (state.pausedAtMs === null || typeof state.pausedAtMs === "number")
+  )
+}
+
+function loadStoredPumpSides(
+  babyId: string,
+): Record<NursingSideKey, SidePumpState> | null {
+  const raw = safeGetItem(storageKey(babyId))
+  if (!raw) return null
+
+  try {
+    const parsed: unknown = JSON.parse(raw)
+    if (!parsed || typeof parsed !== "object") return null
+
+    const sides = parsed as Record<NursingSideKey, SidePumpState>
+    if (!isSidePumpState(sides.L) || !isSidePumpState(sides.R)) return null
+
+    return {
+      L: { ...sides.L },
+      R: { ...sides.R },
+    }
+  } catch {
+    return null
+  }
+}
+
+function persistStoredPumpSides(
+  babyId: string,
+  sides: Record<NursingSideKey, SidePumpState>,
+) {
+  safeSetItem(
+    storageKey(babyId),
+    JSON.stringify({
+      L: sides.L,
+      R: sides.R,
+    }),
+  )
+}
+
+function removeStoredPumpSides(babyId: string) {
+  safeRemoveItem(storageKey(babyId))
+}
 
 function notifyPumpTimerListeners() {
   for (const listener of listeners) {
@@ -44,8 +105,15 @@ export function subscribePumpTimer(listener: () => void) {
 }
 
 export function readPumpTimerCache(babyId: string) {
-  if (pumpTimerCache?.babyId !== babyId) return null
-  return pumpTimerCache.sides
+  if (pumpTimerCache?.babyId === babyId) {
+    return pumpTimerCache.sides
+  }
+
+  const stored = loadStoredPumpSides(babyId)
+  if (!stored) return null
+
+  pumpTimerCache = { babyId, sides: stored }
+  return stored
 }
 
 export function writePumpTimerCache(
@@ -54,22 +122,28 @@ export function writePumpTimerCache(
 ) {
   if (sides.L.status === "idle" && sides.R.status === "idle") {
     pumpTimerCache = null
+    removeStoredPumpSides(babyId)
     notifyPumpTimerListeners()
     return
   }
 
+  const snapshot = {
+    L: { ...sides.L },
+    R: { ...sides.R },
+  }
+
   pumpTimerCache = {
     babyId,
-    sides: {
-      L: { ...sides.L },
-      R: { ...sides.R },
-    },
+    sides: snapshot,
   }
+  persistStoredPumpSides(babyId, snapshot)
   notifyPumpTimerListeners()
 }
 
 export function clearPumpTimerCache() {
+  const babyId = pumpTimerCache?.babyId
   pumpTimerCache = null
+  if (babyId) removeStoredPumpSides(babyId)
   notifyPumpTimerListeners()
 }
 

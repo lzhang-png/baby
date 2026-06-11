@@ -126,6 +126,8 @@ function toActivityItem(record: RawActivity): ActivityItem {
           logged_by: IMPORT_META.logged_by,
           occurred_at: createdAt,
           amount_ml: record.amount_ml,
+          amount_left_ml: null,
+          amount_right_ml: null,
           duration_left_min: record.duration_left_min,
           duration_right_min: record.duration_right_min,
           notes: IMPORT_META.notes,

@@ -123,6 +123,16 @@ function buildDiaperSubSegments(
   return [...subSegments, ...subtypeSegments]
 }
 
+function getPumpTotalMl(pump: {
+  amount_ml: number | null
+  amount_left_ml: number | null
+  amount_right_ml: number | null
+}) {
+  const sideTotal = (pump.amount_left_ml ?? 0) + (pump.amount_right_ml ?? 0)
+  if (sideTotal > 0) return sideTotal
+  return pump.amount_ml ?? 0
+}
+
 function buildPumpSubSegments(
   activities: ActivityItem[],
 ): DaySummarySubSegment[] {
@@ -132,7 +142,7 @@ function buildPumpSubSegments(
   for (const item of activities) {
     if (item.kind !== "pump") continue
     pumps++
-    if (item.data.amount_ml) pumpMl += item.data.amount_ml
+    pumpMl += getPumpTotalMl(item.data)
   }
 
   if (pumps === 0) return []

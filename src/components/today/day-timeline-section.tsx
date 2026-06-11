@@ -28,6 +28,7 @@ import {
   CONNECTOR_TRUNK_OFFSET_PX,
   LOG_CARD_ESTIMATED_HEIGHT_PX,
   LOG_CARD_LEFT_OFFSET_PX,
+  LOG_CARD_MAX_WIDTH_PX,
   OngoingNowCards,
   RecordedEventConnectors,
   RecordedEvents,
@@ -72,9 +73,10 @@ const CHECKPOINT_ICONS: Record<CheckpointIconKind, LucideIcon> = {
   bath: BathIcon,
 }
 
-const SCHEDULE_PANEL_WIDTH = "38%"
-const LOGS_PANEL_WIDTH = "62%"
-const SCHEDULE_PANEL_RATIO = 0.38
+const SCHEDULE_PANEL_RATIO = 0.35
+const TIMELINE_NUDGE_PX = 8
+const SCHEDULE_PANEL_WIDTH = `calc(${SCHEDULE_PANEL_RATIO * 100}% - ${TIMELINE_NUDGE_PX}px)`
+const LOGS_PANEL_WIDTH = `calc(${(1 - SCHEDULE_PANEL_RATIO) * 100}% + ${TIMELINE_NUDGE_PX}px)`
 const NOW_LINE_START_OFFSET_PX = 64 // px-1 + w-14 timestamp clearance
 
 const SCHEDULE_GRID =
@@ -600,13 +602,18 @@ export function DayTimelineSection({
 
       const rootRect = root.getBoundingClientRect()
       const barRect = bar.getBoundingClientRect()
-      const logsPanelLeft = rootRect.width * SCHEDULE_PANEL_RATIO
-      const logsPanelWidth = rootRect.width * (1 - SCHEDULE_PANEL_RATIO)
+      const logsPanelLeft =
+        rootRect.width * SCHEDULE_PANEL_RATIO - TIMELINE_NUDGE_PX
+      const logsPanelWidth =
+        rootRect.width * (1 - SCHEDULE_PANEL_RATIO) + TIMELINE_NUDGE_PX
       setConnectorMetrics({
         barX: barRect.left + barRect.width / 2 - rootRect.left,
         trunkX: logsPanelLeft + CONNECTOR_TRUNK_OFFSET_PX,
         cardLeftX: logsPanelLeft + LOG_CARD_LEFT_OFFSET_PX,
-        cardWidth: Math.min(logsPanelWidth - LOG_CARD_LEFT_OFFSET_PX, 280),
+        cardWidth: Math.min(
+          logsPanelWidth - LOG_CARD_LEFT_OFFSET_PX,
+          LOG_CARD_MAX_WIDTH_PX,
+        ),
       })
     }
 

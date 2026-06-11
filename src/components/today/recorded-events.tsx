@@ -76,7 +76,10 @@ export function getRecordedIcon(
 }
 
 export const LOG_CARD_LEFT_OFFSET_PX = 24 // matches left-6 on card wrapper
-export const CONNECTOR_TRUNK_OFFSET_PX = 16
+export const LOG_CARD_MAX_WIDTH_PX = 320
+export const CONNECTOR_CARD_GAP_PX = 8
+export const CONNECTOR_TRUNK_OFFSET_PX =
+  LOG_CARD_LEFT_OFFSET_PX - CONNECTOR_CARD_GAP_PX
 export const TIMELINE_MUTED_LINE_CLASS = "bg-timeline-line"
 export const TIMELINE_CONNECTOR_STROKE_CLASS = "stroke-timeline-line"
 export const CONNECTOR_CORNER_RADIUS_PX = 6
@@ -97,10 +100,10 @@ function buildRoundedConnectorPath(
     radius,
     horizontalLeg / 2,
     Math.abs(verticalLeg) / 2,
-    finalLeg / 2,
+    Math.max(finalLeg / 2, 0),
   )
 
-  if (cornerRadius < 0.5) {
+  if (cornerRadius < 0.5 || finalLeg < 0.5) {
     return `M ${barX} ${anchorY} H ${trunkX} V ${labelY} H ${cardLeftX}`
   }
 
@@ -122,7 +125,7 @@ function buildRoundedConnectorPath(
   ].join(" ")
 }
 
-const EVENT_CARD_MAX_WIDTH = "max-w-[280px]"
+const EVENT_CARD_MAX_WIDTH = "max-w-[320px]"
 
 export const RECORDED_COLORS: Record<ActivityItem["kind"], string> = {
   feed: "text-sky-400",

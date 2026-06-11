@@ -117,26 +117,167 @@ export async function insertPump(input: {
   userId: string
   occurredAt: string
   amountMl?: number
+  amountLeftMl?: number
+  amountRightMl?: number
   durationLeftMin?: number
   durationRightMin?: number
   notes?: string
 }) {
-  const { data, error } = await supabase
+  return writePumpRow(buildPumpRowPayload(input))
+}
+
+type PumpRowPayload = {
+  baby_id: string
+  logged_by: string
+  occurred_at: string
+  amount_ml: number | null
+  amount_left_ml: number | null
+  amount_right_ml: number | null
+  duration_left_min: number | null
+  duration_right_min: number | null
+  notes: string | null
+}
+
+function isMissingPumpSideAmountColumnsError(error: {
+  code?: string
+  message?: string
+}) {
+  if (error.code === "PGRST204") return true
+  const message = error.message?.toLowerCase() ?? ""
+  return (
+    message.includes("amount_left_ml") || message.includes("amount_right_ml")
+  )
+}
+
+function stripPumpSideAmountColumns<T extends PumpUpdatePayload>(payload: T) {
+  const { amount_left_ml: _left, amount_right_ml: _right, ...legacy } = payload
+  return legacy
+}
+
+function normalizePumpLog(row: PumpLog): PumpLog {
+  return {
+    ...row,
+    amount_left_ml: row.amount_left_ml ?? null,
+    amount_right_ml: row.amount_right_ml ?? null,
+  }
+}
+
+type PumpUpdatePayload = Omit<PumpRowPayload, "baby_id" | "logged_by">
+
+function resolvePumpAmounts(input: {
+  amountMl?: number | null
+  amountLeftMl?: number | null
+  amountRightMl?: number | null
+}) {
+  const amountLeftMl = input.amountLeftMl ?? null
+  const amountRightMl = input.amountRightMl ?? null
+  const sideTotal = (amountLeftMl ?? 0) + (amountRightMl ?? 0)
+  const amountMl = sideTotal > 0 ? sideTotal : input.amountMl ?? null
+
+  return { amountLeftMl, amountRightMl, amountMl }
+}
+
+function buildPumpUpdatePayload(input: {
+  occurredAt: string
+  amountMl?: number | null
+  amountLeftMl?: number | null
+  amountRightMl?: number | null
+  durationLeftMin?: number | null
+  durationRightMin?: number | null
+  notes?: string | null
+}): PumpUpdatePayload {
+  const { amountLeftMl, amountRightMl, amountMl } = resolvePumpAmounts(input)
+
+  return {
+    occurred_at: input.occurredAt,
+    amount_ml: amountMl,
+    amount_left_ml: amountLeftMl,
+    amount_right_ml: amountRightMl,
+    duration_left_min: input.durationLeftMin ?? null,
+    duration_right_min: input.durationRightMin ?? null,
+    notes: input.notes ?? null,
+  }
+}
+
+function buildPumpRowPayload(input: {
+  babyId: string
+  userId: string
+  occurredAt: string
+  amountMl?: number
+  amountLeftMl?: number
+  amountRightMl?: number
+  durationLeftMin?: number
+  durationRightMin?: number
+  notes?: string
+}): PumpRowPayload {
+  const { amountLeftMl, amountRightMl, amountMl } = resolvePumpAmounts(input)
+
+  return {
+    baby_id: input.babyId,
+    logged_by: input.userId,
+    occurred_at: input.occurredAt,
+    amount_ml: amountMl,
+    amount_left_ml: amountLeftMl,
+    amount_right_ml: amountRightMl,
+    duration_left_min: input.durationLeftMin ?? null,
+    duration_right_min: input.durationRightMin ?? null,
+    notes: input.notes ?? null,
+  }
+}
+
+async function writePumpRow(payload: PumpRowPayload) {
+  const full = await supabase
     .from("pump_logs")
-    .insert({
-      baby_id: input.babyId,
-      logged_by: input.userId,
-      occurred_at: input.occurredAt,
-      amount_ml: input.amountMl ?? null,
-      duration_left_min: input.durationLeftMin ?? null,
-      duration_right_min: input.durationRightMin ?? null,
-      notes: input.notes ?? null,
-    })
+    .insert(payload)
     .select()
     .single()
 
-  if (error) throw error
-  return data as PumpLog
+  if (!full.error) {
+    return normalizePumpLog(full.data as PumpLog)
+  }
+
+  if (!isMissingPumpSideAmountColumnsError(full.error)) {
+    throw full.error
+  }
+
+  const legacy = await supabase
+    .from("pump_logs")
+    .insert(stripPumpSideAmountColumns(payload))
+    .select()
+    .single()
+
+  if (legacy.error) throw legacy.error
+  return normalizePumpLog(legacy.data as PumpLog)
+}
+
+async function patchPumpRow(id: string, updatePayload: PumpUpdatePayload) {
+  const full = await supabase
+    .from("pump_logs")
+    .update(updatePayload)
+    .eq("id", id)
+    .select()
+    .single()
+
+  if (!full.error) {
+    return normalizePumpLog(full.data as PumpLog)
+  }
+
+  if (!isMissingPumpSideAmountColumnsError(full.error)) {
+    throw full.error
+  }
+
+  const { amount_left_ml: _left, amount_right_ml: _right, ...legacyUpdate } =
+    updatePayload
+
+  const legacy = await supabase
+    .from("pump_logs")
+    .update(legacyUpdate)
+    .eq("id", id)
+    .select()
+    .single()
+
+  if (legacy.error) throw legacy.error
+  return normalizePumpLog(legacy.data as PumpLog)
 }
 
 type ActivityLogPools = {
@@ -449,26 +590,14 @@ export async function updatePump(
   input: {
     occurredAt: string
     amountMl?: number | null
+    amountLeftMl?: number | null
+    amountRightMl?: number | null
     durationLeftMin?: number | null
     durationRightMin?: number | null
     notes?: string | null
   },
 ) {
-  const { data, error } = await supabase
-    .from("pump_logs")
-    .update({
-      occurred_at: input.occurredAt,
-      amount_ml: input.amountMl ?? null,
-      duration_left_min: input.durationLeftMin ?? null,
-      duration_right_min: input.durationRightMin ?? null,
-      notes: input.notes ?? null,
-    })
-    .eq("id", id)
-    .select()
-    .single()
-
-  if (error) throw error
-  return data as PumpLog
+  return patchPumpRow(id, buildPumpUpdatePayload(input))
 }
 
 export async function deletePump(id: string) {

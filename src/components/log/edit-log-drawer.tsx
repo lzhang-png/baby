@@ -70,7 +70,8 @@ export function EditLogDrawer({
 
   const [diaperType, setDiaperType] = useState<DiaperType>("wet")
 
-  const [pumpMl, setPumpMl] = useState("")
+  const [pumpLeftMl, setPumpLeftMl] = useState("")
+  const [pumpRightMl, setPumpRightMl] = useState("")
   const [pumpLeft, setPumpLeft] = useState("")
   const [pumpRight, setPumpRight] = useState("")
 
@@ -101,7 +102,13 @@ export function EditLogDrawer({
         break
       case "pump":
         setWhen(toDatetimeLocalValue(new Date(item.data.occurred_at)))
-        setPumpMl(item.data.amount_ml?.toString() ?? "")
+        setPumpLeftMl(
+          item.data.amount_left_ml?.toString() ??
+            (item.data.amount_right_ml == null && item.data.amount_ml
+              ? item.data.amount_ml.toString()
+              : ""),
+        )
+        setPumpRightMl(item.data.amount_right_ml?.toString() ?? "")
         setPumpLeft(item.data.duration_left_min?.toString() ?? "")
         setPumpRight(item.data.duration_right_min?.toString() ?? "")
         break
@@ -144,7 +151,8 @@ export function EditLogDrawer({
         case "pump":
           await updatePump(item.data.id, {
             occurredAt: fromDatetimeLocalValue(when),
-            amountMl: pumpMl ? Number(pumpMl) : null,
+            amountLeftMl: pumpLeftMl ? Number(pumpLeftMl) : null,
+            amountRightMl: pumpRightMl ? Number(pumpRightMl) : null,
             durationLeftMin: Number(pumpLeft) || null,
             durationRightMin: Number(pumpRight) || null,
             notes: notes || null,
@@ -342,17 +350,29 @@ export function EditLogDrawer({
                     onChange={(e) => setWhen(e.target.value)}
                   />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-pump-ml">{t("log.amountMlOptional")}</Label>
-                  <Input
-                    id="edit-pump-ml"
-                    type="number"
-                    min={0}
-                    value={pumpMl}
-                    onChange={(e) => setPumpMl(e.target.value)}
-                  />
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="edit-pump-left-ml">{t("log.leftAmountMl")}</Label>
+                    <Input
+                      id="edit-pump-left-ml"
+                      type="number"
+                      min={0}
+                      value={pumpLeftMl}
+                      onChange={(e) => setPumpLeftMl(e.target.value)}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <Label htmlFor="edit-pump-right-ml">{t("log.rightAmountMl")}</Label>
+                    <Input
+                      id="edit-pump-right-ml"
+                      type="number"
+                      min={0}
+                      value={pumpRightMl}
+                      onChange={(e) => setPumpRightMl(e.target.value)}
+                    />
+                  </div>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
+                <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="edit-pump-l">{t("log.leftMin")}</Label>
                     <Input

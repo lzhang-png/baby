@@ -113,7 +113,7 @@ export function DaySummariesPanel({ open }: DaySummariesPanelProps) {
               </h3>
               <DayActivitySummary
                 activities={activities}
-                className="mt-1.5 text-xs"
+                className="mt-3 text-sm leading-snug [&_svg]:size-4"
               />
             </li>
           ))}

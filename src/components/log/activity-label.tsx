@@ -11,7 +11,7 @@ import {
   type NursingSideKey,
   type SideNursingState,
 } from "@/lib/nursing-timer-session"
-import type { ActivityItem, FeedLog, SleepLog } from "@/lib/types"
+import type { ActivityItem, FeedLog, PumpLog, SleepLog } from "@/lib/types"
 import {
   getSleepDurationMinutes,
   type SleepTimelinePhase,
@@ -32,6 +32,38 @@ export function diaperTypeLabel(type: string) {
 type ActivityLabelOptions = {
   sleepPhase?: SleepTimelinePhase
   now?: Date
+}
+
+function getPumpSideAmounts(pump: PumpLog) {
+  if (pump.amount_left_ml != null || pump.amount_right_ml != null) {
+    return {
+      leftMl: pump.amount_left_ml,
+      rightMl: pump.amount_right_ml,
+    }
+  }
+
+  if (!pump.amount_ml) {
+    return { leftMl: null, rightMl: null }
+  }
+
+  const leftMin = pump.duration_left_min ?? 0
+  const rightMin = pump.duration_right_min ?? 0
+  const totalMin = leftMin + rightMin
+
+  if (leftMin > 0 && rightMin > 0) {
+    const leftMl = Math.round((pump.amount_ml * leftMin) / totalMin)
+    return { leftMl, rightMl: pump.amount_ml - leftMl }
+  }
+
+  if (leftMin > 0) {
+    return { leftMl: pump.amount_ml, rightMl: null }
+  }
+
+  if (rightMin > 0) {
+    return { leftMl: null, rightMl: pump.amount_ml }
+  }
+
+  return { leftMl: null, rightMl: null }
 }
 
 export function activitySummary(
@@ -76,7 +108,12 @@ export function activitySummary(
     case "pump": {
       const p = item.data
       const parts = [i18n.t("activity.pumping")]
-      if (p.amount_ml) parts.push(`${p.amount_ml} ml`)
+      const { leftMl, rightMl } = getPumpSideAmounts(p)
+      if (leftMl) parts.push(`L ${leftMl} ml`)
+      if (rightMl) parts.push(`R ${rightMl} ml`)
+      if (!leftMl && !rightMl && p.amount_ml) {
+        parts.push(`${p.amount_ml} ml`)
+      }
       if (p.duration_left_min || p.duration_right_min) {
         parts.push(`L${p.duration_left_min ?? 0}m R${p.duration_right_min ?? 0}m`)
       }

@@ -83,6 +83,8 @@ create table public.pump_logs (
   logged_by uuid references public.profiles(id) on delete set null,
   occurred_at timestamptz not null,
   amount_ml int check (amount_ml is null or amount_ml >= 0),
+  amount_left_ml int check (amount_left_ml is null or amount_left_ml >= 0),
+  amount_right_ml int check (amount_right_ml is null or amount_right_ml >= 0),
   duration_left_min int check (duration_left_min is null or duration_left_min >= 0),
   duration_right_min int check (duration_right_min is null or duration_right_min >= 0),
   notes text,

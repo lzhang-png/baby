@@ -63,6 +63,8 @@ export type PumpLog = {
   logged_by: string | null
   occurred_at: string
   amount_ml: number | null
+  amount_left_ml: number | null
+  amount_right_ml: number | null
   duration_left_min: number | null
   duration_right_min: number | null
   notes: string | null

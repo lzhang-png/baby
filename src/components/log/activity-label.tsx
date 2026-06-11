@@ -190,7 +190,9 @@ export function isOngoingNursingGroupPulsing(
   return !isOngoingNursingGroupPaused(group, nursingSides)
 }
 
-export function isOngoingNursingFeed(item: ActivityItem): boolean {
+export function isOngoingNursingFeed(
+  item: ActivityItem,
+): item is Extract<ActivityItem, { kind: "feed" }> {
   if (item.kind !== "feed") return false
   const feed = item.data
   return (
@@ -208,7 +210,7 @@ export function getOngoingTimelineCards(
   if (!isSameDay(date, now)) return []
 
   const cards: OngoingTimelineCard[] = []
-  const ongoingNursing: ActivityItem[] = []
+  const ongoingNursing: Extract<ActivityItem, { kind: "feed" }>[] = []
 
   for (const item of activities) {
     if (item.kind === "sleep") {

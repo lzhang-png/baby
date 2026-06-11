@@ -19,6 +19,7 @@ import {
 } from "@/lib/api/logs"
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/format"
 import { enrichPumpLog, parseOptionalMlInput } from "@/lib/pump-side-amounts"
+import type { SavedNursingGroup } from "@/lib/nursing-timeline"
 import type {
   ActivityItem,
   DiaperType,
@@ -40,6 +41,7 @@ import { SegmentedControl } from "@/components/ui/segmented-control"
 
 type EditLogDrawerProps = {
   item: ActivityItem | null
+  nursingGroup?: SavedNursingGroup
   open: boolean
   onOpenChange: (open: boolean) => void
   onSaved: () => void
@@ -47,6 +49,7 @@ type EditLogDrawerProps = {
 
 export function EditLogDrawer({
   item,
+  nursingGroup,
   open,
   onOpenChange,
   onSaved,
@@ -68,6 +71,8 @@ export function EditLogDrawer({
   const [amountMl, setAmountMl] = useState("")
   const [durationMin, setDurationMin] = useState("")
   const [side, setSide] = useState<NursingSide>("R")
+  const [nursingLeftDuration, setNursingLeftDuration] = useState("")
+  const [nursingRightDuration, setNursingRightDuration] = useState("")
 
   const [diaperType, setDiaperType] = useState<DiaperType>("wet")
 
@@ -84,10 +89,23 @@ export function EditLogDrawer({
     switch (item.kind) {
       case "feed":
         setWhen(toDatetimeLocalValue(new Date(item.data.occurred_at)))
-        setFeedType(item.data.feed_type)
+        setFeedType(
+          item.data.feed_type === "donated" ? "formula" : item.data.feed_type,
+        )
         setAmountMl(item.data.amount_ml?.toString() ?? "")
         setDurationMin(item.data.duration_min?.toString() ?? "")
         setSide(item.data.side ?? "R")
+        if (item.data.feed_type === "nursing" && nursingGroup) {
+          setNursingLeftDuration(
+            nursingGroup.left?.duration_min?.toString() ?? "",
+          )
+          setNursingRightDuration(
+            nursingGroup.right?.duration_min?.toString() ?? "",
+          )
+        } else {
+          setNursingLeftDuration("")
+          setNursingRightDuration("")
+        }
         break
       case "sleep":
         setWhen(toDatetimeLocalValue(new Date(item.data.started_at)))
@@ -111,7 +129,7 @@ export function EditLogDrawer({
         break
       }
     }
-  }, [item])
+  }, [item, nursingGroup])
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -121,16 +139,52 @@ export function EditLogDrawer({
     try {
       switch (item.kind) {
         case "feed":
-          await updateFeed(item.data.id, {
-            occurredAt: fromDatetimeLocalValue(when),
-            feedType,
-            amountMl:
-              feedType !== "nursing" ? Number(amountMl) || null : null,
-            durationMin:
-              feedType === "nursing" ? Number(durationMin) || null : null,
-            side: feedType === "nursing" ? side : null,
-            notes: notes || null,
-          })
+          if (feedType === "nursing" && nursingGroup) {
+            await Promise.all(
+              (
+                [
+                  {
+                    feed: nursingGroup.left,
+                    sideKey: "L" as const,
+                    durationMin: Number(nursingLeftDuration) || null,
+                  },
+                  {
+                    feed: nursingGroup.right,
+                    sideKey: "R" as const,
+                    durationMin: Number(nursingRightDuration) || null,
+                  },
+                ] as const
+              )
+                .filter(
+                  (entry): entry is typeof entry & { feed: NonNullable<typeof entry.feed> } =>
+                    entry.feed != null,
+                )
+                .map((entry) =>
+                  updateFeed(entry.feed.id, {
+                    occurredAt:
+                      entry.feed.id === item.data.id
+                        ? fromDatetimeLocalValue(when)
+                        : entry.feed.occurred_at,
+                    feedType: "nursing",
+                    amountMl: entry.feed.amount_ml,
+                    durationMin: entry.durationMin,
+                    side: entry.sideKey,
+                    notes: entry.feed.notes,
+                  }),
+                ),
+            )
+          } else {
+            await updateFeed(item.data.id, {
+              occurredAt: fromDatetimeLocalValue(when),
+              feedType,
+              amountMl:
+                feedType !== "nursing" ? Number(amountMl) || null : null,
+              durationMin:
+                feedType === "nursing" ? Number(durationMin) || null : null,
+              side: feedType === "nursing" ? side : null,
+              notes: notes || null,
+            })
+          }
           break
         case "sleep":
           await updateSleep(item.data.id, {
@@ -193,12 +247,6 @@ export function EditLogDrawer({
                     onValueChange={setFeedType}
                     options={[
                       {
-                        value: "nursing",
-                        label: t("log.nursing"),
-                        icon: MotherIcon,
-                        iconClassName: "text-sky-400",
-                      },
-                      {
                         value: "formula",
                         label: t("log.formula"),
                         icon: MilkIcon,
@@ -211,9 +259,9 @@ export function EditLogDrawer({
                         iconClassName: "text-sky-400",
                       },
                       {
-                        value: "donated",
-                        label: t("log.donated"),
-                        icon: MilkIcon,
+                        value: "nursing",
+                        label: t("log.nursing"),
+                        icon: MotherIcon,
                         iconClassName: "text-sky-400",
                       },
                     ]}
@@ -229,29 +277,64 @@ export function EditLogDrawer({
                   />
                 </div>
                 {feedType === "nursing" ? (
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="flex flex-col gap-2">
-                      <Label htmlFor="edit-duration">{t("log.durationMin")}</Label>
-                      <Input
-                        id="edit-duration"
-                        type="number"
-                        min={1}
-                        value={durationMin}
-                        onChange={(e) => setDurationMin(e.target.value)}
-                      />
+                  nursingGroup ? (
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="edit-nursing-left-duration">
+                          {t("log.leftMin")}
+                        </Label>
+                        <Input
+                          id="edit-nursing-left-duration"
+                          type="number"
+                          min={0}
+                          value={nursingLeftDuration}
+                          onChange={(e) =>
+                            setNursingLeftDuration(e.target.value)
+                          }
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="edit-nursing-right-duration">
+                          {t("log.rightMin")}
+                        </Label>
+                        <Input
+                          id="edit-nursing-right-duration"
+                          type="number"
+                          min={0}
+                          value={nursingRightDuration}
+                          onChange={(e) =>
+                            setNursingRightDuration(e.target.value)
+                          }
+                        />
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <Label>{t("log.side")}</Label>
-                      <SegmentedControl
-                        value={side}
-                        onValueChange={setSide}
-                        options={[
-                          { value: "L", label: t("common.left") },
-                          { value: "R", label: t("common.right") },
-                        ]}
-                      />
+                  ) : (
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <div className="flex flex-col gap-2">
+                        <Label htmlFor="edit-duration">
+                          {t("log.durationMin")}
+                        </Label>
+                        <Input
+                          id="edit-duration"
+                          type="number"
+                          min={1}
+                          value={durationMin}
+                          onChange={(e) => setDurationMin(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Label>{t("log.side")}</Label>
+                        <SegmentedControl
+                          value={side}
+                          onValueChange={setSide}
+                          options={[
+                            { value: "L", label: t("common.left") },
+                            { value: "R", label: t("common.right") },
+                          ]}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )
                 ) : (
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="edit-amount">{t("log.amountMl")}</Label>

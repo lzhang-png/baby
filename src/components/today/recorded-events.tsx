@@ -277,7 +277,10 @@ export function RecordedEvents({
 }: RecordedEventsProps) {
   const { t } = useTranslation()
   const { notifyActivityChanged } = useActivityRefresh()
-  const [editingItem, setEditingItem] = useState<ActivityItem | null>(null)
+  const [editing, setEditing] = useState<{
+    item: ActivityItem
+    nursingGroup?: SavedNursingGroup
+  } | null>(null)
 
   async function handleDelete(
     item: ActivityItem,
@@ -316,7 +319,9 @@ export function RecordedEvents({
           <EventCard
             event={event}
             now={now}
-            onEdit={setEditingItem}
+            onEdit={(item) =>
+              setEditing({ item, nursingGroup: event.nursingGroup })
+            }
             onDelete={(item) => handleDelete(item, event.nursingGroup)}
             onHeightChange={onCardHeightChange}
           />
@@ -324,13 +329,14 @@ export function RecordedEvents({
       ))}
 
       <EditLogDrawer
-        item={editingItem}
-        open={editingItem !== null}
+        item={editing?.item ?? null}
+        nursingGroup={editing?.nursingGroup}
+        open={editing !== null}
         onOpenChange={(open) => {
-          if (!open) setEditingItem(null)
+          if (!open) setEditing(null)
         }}
         onSaved={() => {
-          setEditingItem(null)
+          setEditing(null)
           notifyActivityChanged()
         }}
       />

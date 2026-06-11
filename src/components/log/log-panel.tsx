@@ -62,6 +62,7 @@ import {
   type SidePumpState,
 } from "@/lib/pump-timer-session"
 import type { DiaperType, FeedType } from "@/lib/types"
+import { parseOptionalMlInput } from "@/lib/pump-side-amounts"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -859,8 +860,8 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
         babyId,
         userId,
         occurredAt: startedAts[0] ?? new Date().toISOString(),
-        amountLeftMl: pumpLeftMl ? Number(pumpLeftMl) : undefined,
-        amountRightMl: pumpRightMl ? Number(pumpRightMl) : undefined,
+        amountLeftMl: parseOptionalMlInput(pumpLeftMl) ?? undefined,
+        amountRightMl: parseOptionalMlInput(pumpRightMl) ?? undefined,
         durationLeftMin: durationMinFromSec(leftSec),
         durationRightMin: durationMinFromSec(rightSec),
       })

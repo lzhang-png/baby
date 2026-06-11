@@ -11,7 +11,8 @@ import {
   type NursingSideKey,
   type SideNursingState,
 } from "@/lib/nursing-timer-session"
-import type { ActivityItem, FeedLog, PumpLog, SleepLog } from "@/lib/types"
+import type { ActivityItem, FeedLog, SleepLog } from "@/lib/types"
+import { getPumpSideAmounts } from "@/lib/pump-side-amounts"
 import {
   getSleepDurationMinutes,
   type SleepTimelinePhase,
@@ -32,38 +33,6 @@ export function diaperTypeLabel(type: string) {
 type ActivityLabelOptions = {
   sleepPhase?: SleepTimelinePhase
   now?: Date
-}
-
-function getPumpSideAmounts(pump: PumpLog) {
-  if (pump.amount_left_ml != null || pump.amount_right_ml != null) {
-    return {
-      leftMl: pump.amount_left_ml,
-      rightMl: pump.amount_right_ml,
-    }
-  }
-
-  if (!pump.amount_ml) {
-    return { leftMl: null, rightMl: null }
-  }
-
-  const leftMin = pump.duration_left_min ?? 0
-  const rightMin = pump.duration_right_min ?? 0
-  const totalMin = leftMin + rightMin
-
-  if (leftMin > 0 && rightMin > 0) {
-    const leftMl = Math.round((pump.amount_ml * leftMin) / totalMin)
-    return { leftMl, rightMl: pump.amount_ml - leftMl }
-  }
-
-  if (leftMin > 0) {
-    return { leftMl: pump.amount_ml, rightMl: null }
-  }
-
-  if (rightMin > 0) {
-    return { leftMl: null, rightMl: pump.amount_ml }
-  }
-
-  return { leftMl: null, rightMl: null }
 }
 
 export function activitySummary(

@@ -3,6 +3,7 @@ import {
   feedTypeLabel,
 } from "@/components/log/activity-label"
 import i18n from "@/lib/i18n"
+import { getPumpTotalMl } from "@/lib/pump-side-amounts"
 import type {
   ActivityItem,
   DiaperType,
@@ -121,16 +122,6 @@ function buildDiaperSubSegments(
   })
 
   return [...subSegments, ...subtypeSegments]
-}
-
-function getPumpTotalMl(pump: {
-  amount_ml: number | null
-  amount_left_ml: number | null
-  amount_right_ml: number | null
-}) {
-  const sideTotal = (pump.amount_left_ml ?? 0) + (pump.amount_right_ml ?? 0)
-  if (sideTotal > 0) return sideTotal
-  return pump.amount_ml ?? 0
 }
 
 function buildPumpSubSegments(

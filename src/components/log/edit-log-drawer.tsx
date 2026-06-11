@@ -18,6 +18,7 @@ import {
   updateSleep,
 } from "@/lib/api/logs"
 import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/format"
+import { enrichPumpLog, parseOptionalMlInput } from "@/lib/pump-side-amounts"
 import type {
   ActivityItem,
   DiaperType,
@@ -100,18 +101,15 @@ export function EditLogDrawer({
         setWhen(toDatetimeLocalValue(new Date(item.data.occurred_at)))
         setDiaperType(item.data.diaper_type)
         break
-      case "pump":
-        setWhen(toDatetimeLocalValue(new Date(item.data.occurred_at)))
-        setPumpLeftMl(
-          item.data.amount_left_ml?.toString() ??
-            (item.data.amount_right_ml == null && item.data.amount_ml
-              ? item.data.amount_ml.toString()
-              : ""),
-        )
-        setPumpRightMl(item.data.amount_right_ml?.toString() ?? "")
-        setPumpLeft(item.data.duration_left_min?.toString() ?? "")
-        setPumpRight(item.data.duration_right_min?.toString() ?? "")
+      case "pump": {
+        const pump = enrichPumpLog(item.data)
+        setWhen(toDatetimeLocalValue(new Date(pump.occurred_at)))
+        setPumpLeftMl(pump.amount_left_ml?.toString() ?? "")
+        setPumpRightMl(pump.amount_right_ml?.toString() ?? "")
+        setPumpLeft(pump.duration_left_min?.toString() ?? "")
+        setPumpRight(pump.duration_right_min?.toString() ?? "")
         break
+      }
     }
   }, [item])
 
@@ -151,8 +149,8 @@ export function EditLogDrawer({
         case "pump":
           await updatePump(item.data.id, {
             occurredAt: fromDatetimeLocalValue(when),
-            amountLeftMl: pumpLeftMl ? Number(pumpLeftMl) : null,
-            amountRightMl: pumpRightMl ? Number(pumpRightMl) : null,
+            amountLeftMl: parseOptionalMlInput(pumpLeftMl),
+            amountRightMl: parseOptionalMlInput(pumpRightMl),
             durationLeftMin: Number(pumpLeft) || null,
             durationRightMin: Number(pumpRight) || null,
             notes: notes || null,

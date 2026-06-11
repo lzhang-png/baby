@@ -10,6 +10,10 @@ import type {
   PumpLog,
   SleepLog,
 } from "@/lib/types"
+import {
+  enrichPumpLog,
+  mergeSideAmountsNote,
+} from "@/lib/pump-side-amounts"
 
 export async function insertFeed(input: {
   babyId: string
@@ -145,7 +149,8 @@ function isMissingPumpSideAmountColumnsError(error: {
   if (error.code === "PGRST204") return true
   const message = error.message?.toLowerCase() ?? ""
   return (
-    message.includes("amount_left_ml") || message.includes("amount_right_ml")
+    message.includes("could not find") &&
+    (message.includes("amount_left_ml") || message.includes("amount_right_ml"))
   )
 }
 
@@ -155,11 +160,7 @@ function stripPumpSideAmountColumns<T extends PumpUpdatePayload>(payload: T) {
 }
 
 function normalizePumpLog(row: PumpLog): PumpLog {
-  return {
-    ...row,
-    amount_left_ml: row.amount_left_ml ?? null,
-    amount_right_ml: row.amount_right_ml ?? null,
-  }
+  return enrichPumpLog(row)
 }
 
 type PumpUpdatePayload = Omit<PumpRowPayload, "baby_id" | "logged_by">
@@ -242,7 +243,14 @@ async function writePumpRow(payload: PumpRowPayload) {
 
   const legacy = await supabase
     .from("pump_logs")
-    .insert(stripPumpSideAmountColumns(payload))
+    .insert({
+      ...stripPumpSideAmountColumns(payload),
+      notes: mergeSideAmountsNote(
+        payload.notes,
+        payload.amount_left_ml,
+        payload.amount_right_ml,
+      ),
+    })
     .select()
     .single()
 
@@ -271,7 +279,14 @@ async function patchPumpRow(id: string, updatePayload: PumpUpdatePayload) {
 
   const legacy = await supabase
     .from("pump_logs")
-    .update(legacyUpdate)
+    .update({
+      ...legacyUpdate,
+      notes: mergeSideAmountsNote(
+        updatePayload.notes,
+        updatePayload.amount_left_ml,
+        updatePayload.amount_right_ml,
+      ),
+    })
     .eq("id", id)
     .select()
     .single()
@@ -437,7 +452,7 @@ function buildActivitiesForDay(
       .map((d) => ({
         kind: "pump" as const,
         at: d.occurred_at,
-        data: d,
+        data: enrichPumpLog(d),
       })),
   ]
 

@@ -23,6 +23,9 @@ import {
   activitySummary,
   activityTime,
   getOngoingElapsedSec,
+  isOngoingNursingGroupPaused,
+  isOngoingNursingGroupPulsing,
+  ongoingNursingGroupElapsedLabel,
   ongoingTimelineTitle,
   type OngoingTimelineCard,
 } from "@/components/log/activity-label"
@@ -364,22 +367,29 @@ function OngoingNowCard({
 }) {
   const { t } = useTranslation()
   const logPanel = useLogPanel()
+  const { item, nursingGroup } = card
   const cardRef = useCardHeightReport(card.id, onHeightChange)
-  const Icon = getRecordedIcon(card.item)
-  const panelType = logPanelTypeForOngoingItem(card.item)
-  const elapsedSec = getOngoingElapsedSec(card.item, liveNow, nursingSides)
+  const Icon = getRecordedIcon(item)
+  const panelType = logPanelTypeForOngoingItem(item)
+  const elapsedSec = getOngoingElapsedSec(item, liveNow, nursingSides, nursingGroup)
   const nursingState =
-    card.item.kind === "feed" &&
-    (card.item.data.side === "L" || card.item.data.side === "R")
+    !nursingGroup &&
+    item.kind === "feed" &&
+    (item.data.side === "L" || item.data.side === "R")
       ? getNursingSideStateForFeed(
           nursingSides,
-          card.item.data.id,
-          card.item.data.side,
+          item.data.id,
+          item.data.side,
         )
       : null
+  const isPaused = nursingGroup
+    ? isOngoingNursingGroupPaused(nursingGroup, nursingSides)
+    : nursingState?.status === "paused"
   const isPulsing =
-    card.item.kind === "sleep" ||
-    (card.item.kind === "feed" && nursingState?.status !== "paused")
+    item.kind === "sleep" ||
+    (nursingGroup
+      ? isOngoingNursingGroupPulsing(nursingGroup, nursingSides)
+      : item.kind === "feed" && nursingState?.status !== "paused")
 
   function handleOpenLogPanel() {
     if (!logPanel || !panelType) return
@@ -419,11 +429,19 @@ function OngoingNowCard({
         />
         <div className="min-w-0 flex-1">
           <p className="text-card-foreground text-sm leading-snug">
-            {ongoingTimelineTitle(card.item)}
+            {ongoingTimelineTitle(item, nursingGroup)}
           </p>
           <p className="flex items-baseline gap-1.5 text-sm leading-snug tabular-nums">
-            <span>{formatElapsedClock(elapsedSec)}</span>
-            {nursingState?.status === "paused" && (
+            <span>
+              {nursingGroup
+                ? ongoingNursingGroupElapsedLabel(
+                    nursingGroup,
+                    nursingSides,
+                    liveNow,
+                  )
+                : formatElapsedClock(elapsedSec)}
+            </span>
+            {isPaused && (
               <span className="text-muted-foreground font-normal">
                 {t("common.paused")}
               </span>

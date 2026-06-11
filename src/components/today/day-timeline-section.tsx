@@ -18,8 +18,10 @@ import {
 import {
   activitySummary,
   getOngoingConnectorAnchorAt,
+  getOngoingElapsedSec,
   getOngoingTimelineCards,
   isOngoingNursingFeed,
+  ongoingNursingGroupElapsedLabel,
   ongoingTimelineTitle,
 } from "@/components/log/activity-label"
 import { DayActivitySummary } from "@/components/today/day-activity-summary"
@@ -40,7 +42,7 @@ import {
   getImportedActivitiesForDay,
   mergeActivities,
 } from "@/lib/baby-tracker-import"
-import { formatDayHeading, isSameDay, startOfDay } from "@/lib/format"
+import { formatDayHeading, formatElapsedClock, isSameDay, startOfDay } from "@/lib/format"
 import { expandActivitiesForTimeline } from "@/lib/sleep-timeline"
 import { collapseSavedNursingSessions } from "@/lib/nursing-timeline"
 import {
@@ -521,6 +523,7 @@ export function DayTimelineSection({
               const frozenAt = getOngoingConnectorAnchorAt(
                 card.item,
                 nursingSides,
+                card.nursingGroup,
               )
               return frozenAt
                 ? layout.getProgressPx(getNowLayoutMinutes(frozenAt))
@@ -565,7 +568,9 @@ export function DayTimelineSection({
               (card) =>
                 measuredCardHeights[card.id] ??
                 estimateRecordedCardHeightPx(
-                  `${ongoingTimelineTitle(card.item)}\n00:00`,
+                  card.nursingGroup
+                    ? `${ongoingTimelineTitle(card.item, card.nursingGroup)}\n${ongoingNursingGroupElapsedLabel(card.nursingGroup, nursingSides, now)}`
+                    : `${ongoingTimelineTitle(card.item)}\n${formatElapsedClock(getOngoingElapsedSec(card.item, now, nursingSides, card.nursingGroup))}`,
                   cardWidth,
                   false,
                   fontFamily,

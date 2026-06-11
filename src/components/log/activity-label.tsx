@@ -2,6 +2,7 @@ import i18n from "@/lib/i18n"
 import {
   formatCompactDuration,
   formatDuration,
+  formatElapsedClock,
   formatTime,
   isSameDay,
 } from "@/lib/format"
@@ -129,6 +130,64 @@ export function ongoingNursingLabel(feed: FeedLog, now: Date): string {
 export type OngoingTimelineCard = {
   id: string
   item: ActivityItem
+  nursingGroup?: SavedNursingGroup
+}
+
+function getOngoingFeedElapsedSec(
+  feed: FeedLog,
+  nursingSides?: Record<NursingSideKey, SideNursingState> | null,
+  now = new Date(),
+): number {
+  if (feed.side === "L" || feed.side === "R") {
+    const state = getNursingSideStateForFeed(nursingSides, feed.id, feed.side)
+    if (state) return getSideElapsedSec(state)
+  }
+  const startMs = new Date(feed.occurred_at).getTime()
+  return Math.max(0, Math.floor((now.getTime() - startMs) / 1000))
+}
+
+export function ongoingNursingGroupElapsedLabel(
+  group: SavedNursingGroup,
+  nursingSides?: Record<NursingSideKey, SideNursingState> | null,
+  now = new Date(),
+): string {
+  const parts: string[] = []
+
+  if (group.left) {
+    parts.push(
+      `L ${formatElapsedClock(getOngoingFeedElapsedSec(group.left, nursingSides, now))}`,
+    )
+  }
+  if (group.right) {
+    parts.push(
+      `R ${formatElapsedClock(getOngoingFeedElapsedSec(group.right, nursingSides, now))}`,
+    )
+  }
+
+  return parts.join(" · ")
+}
+
+export function isOngoingNursingGroupPaused(
+  group: SavedNursingGroup,
+  nursingSides?: Record<NursingSideKey, SideNursingState> | null,
+): boolean {
+  const sides = [group.left, group.right].filter(
+    (feed): feed is FeedLog => feed != null,
+  )
+  if (sides.length === 0) return false
+
+  return sides.every((feed) => {
+    if (feed.side !== "L" && feed.side !== "R") return false
+    const state = getNursingSideStateForFeed(nursingSides, feed.id, feed.side)
+    return state?.status === "paused"
+  })
+}
+
+export function isOngoingNursingGroupPulsing(
+  group: SavedNursingGroup,
+  nursingSides?: Record<NursingSideKey, SideNursingState> | null,
+): boolean {
+  return !isOngoingNursingGroupPaused(group, nursingSides)
 }
 
 export function isOngoingNursingFeed(item: ActivityItem): boolean {
@@ -149,6 +208,7 @@ export function getOngoingTimelineCards(
   if (!isSameDay(date, now)) return []
 
   const cards: OngoingTimelineCard[] = []
+  const ongoingNursing: ActivityItem[] = []
 
   for (const item of activities) {
     if (item.kind === "sleep") {
@@ -159,17 +219,30 @@ export function getOngoingTimelineCards(
       continue
     }
 
-    if (item.kind === "feed") {
-      if (isOngoingNursingFeed(item)) {
-        cards.push({ id: `ongoing-nursing-${item.data.id}`, item })
-      }
+    if (isOngoingNursingFeed(item)) {
+      ongoingNursing.push(item)
+    }
+  }
+
+  const left = ongoingNursing.find((item) => item.data.side === "L")
+  const right = ongoingNursing.find((item) => item.data.side === "R")
+
+  if (left && right) {
+    cards.push({
+      id: `ongoing-nursing-${left.data.id}-${right.data.id}`,
+      item: left,
+      nursingGroup: { left: left.data, right: right.data },
+    })
+  } else {
+    for (const item of ongoingNursing) {
+      cards.push({ id: `ongoing-nursing-${item.data.id}`, item })
     }
   }
 
   return cards.sort((a, b) => {
     const rank = (card: OngoingTimelineCard) => {
       if (card.item.kind === "sleep") return 0
-      if (card.item.kind === "feed" && card.item.data.side === "L") return 1
+      if (card.nursingGroup || card.item.kind === "feed") return 1
       return 2
     }
     return rank(a) - rank(b)
@@ -182,9 +255,13 @@ export function ongoingTimelineLabel(item: ActivityItem, now: Date): string {
   return ""
 }
 
-export function ongoingTimelineTitle(item: ActivityItem): string {
+export function ongoingTimelineTitle(
+  item: ActivityItem,
+  nursingGroup?: SavedNursingGroup,
+): string {
   if (item.kind === "sleep") return i18n.t("activity.sleeping")
   if (item.kind === "feed") {
+    if (nursingGroup) return i18n.t("log.nursing")
     const feed = item.data
     if (feed.side === "L") return i18n.t("activity.nursingOnLeft")
     if (feed.side === "R") return i18n.t("activity.nursingOnRight")
@@ -197,6 +274,7 @@ export function getOngoingElapsedSec(
   item: ActivityItem,
   now: Date,
   nursingSides?: Record<NursingSideKey, SideNursingState> | null,
+  nursingGroup?: SavedNursingGroup,
 ): number {
   if (item.kind === "sleep") {
     const startMs = new Date(item.data.started_at).getTime()
@@ -204,13 +282,19 @@ export function getOngoingElapsedSec(
   }
 
   if (item.kind === "feed") {
-    const feed = item.data
-    if (feed.side === "L" || feed.side === "R") {
-      const state = getNursingSideStateForFeed(nursingSides, feed.id, feed.side)
-      if (state) return getSideElapsedSec(state)
+    if (nursingGroup) {
+      const elapsed = [
+        nursingGroup.left
+          ? getOngoingFeedElapsedSec(nursingGroup.left, nursingSides, now)
+          : 0,
+        nursingGroup.right
+          ? getOngoingFeedElapsedSec(nursingGroup.right, nursingSides, now)
+          : 0,
+      ]
+      return Math.max(...elapsed, 0)
     }
-    const startMs = new Date(feed.occurred_at).getTime()
-    return Math.max(0, Math.floor((now.getTime() - startMs) / 1000))
+
+    return getOngoingFeedElapsedSec(item.data, nursingSides, now)
   }
 
   return 0
@@ -220,7 +304,25 @@ export function getOngoingElapsedSec(
 export function getOngoingConnectorAnchorAt(
   item: ActivityItem,
   nursingSides?: Record<NursingSideKey, SideNursingState> | null,
+  nursingGroup?: SavedNursingGroup,
 ): Date | null {
+  if (nursingGroup) {
+    if (isOngoingNursingGroupPulsing(nursingGroup, nursingSides)) return null
+
+    const pausedAtMs = [nursingGroup.left, nursingGroup.right]
+      .filter((feed): feed is FeedLog => feed != null)
+      .flatMap((feed) => {
+        if (feed.side !== "L" && feed.side !== "R") return []
+        const state = getNursingSideStateForFeed(nursingSides, feed.id, feed.side)
+        return state?.status === "paused" && state.pausedAtMs
+          ? [state.pausedAtMs]
+          : []
+      })
+
+    if (pausedAtMs.length === 0) return null
+    return new Date(Math.max(...pausedAtMs))
+  }
+
   if (item.kind !== "feed") return null
 
   const feed = item.data

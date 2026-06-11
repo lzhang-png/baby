@@ -30,6 +30,10 @@ import {
   hasOngoingPumpSession,
   usePumpTimerSession,
 } from "@/lib/pump-timer-session"
+import {
+  hasOngoingNursingSession,
+  useNursingTimerSession,
+} from "@/lib/nursing-timer-session"
 import { Drawer, DrawerContent } from "@/components/ui/drawer"
 import {
   DropdownMenu,
@@ -117,6 +121,8 @@ function BottomFabBar({
   const { zoomInEnabled, zoomOutEnabled, zoomIn, zoomOut } = useTimelineZoom()
   const pumpSides = usePumpTimerSession(baby?.id)
   const hasOngoingPump = hasOngoingPumpSession(pumpSides)
+  const nursingSides = useNursingTimerSession(baby?.id)
+  const hasOngoingNursing = hasOngoingNursingSession(nursingSides)
 
   if (logOpen || summaryOpen) return null
 
@@ -203,6 +209,11 @@ function BottomFabBar({
               >
                 <Icon aria-hidden className={cn("size-5", RECORDED_COLORS[type])} />
                 <span className="min-w-0 flex-1">{t(labelKey)}</span>
+                {type === "feed" && hasOngoingNursing && (
+                  <Badge className="h-7 bg-blue-500 px-3 text-sm font-semibold text-white hover:bg-blue-500">
+                    {t("common.ongoing")}
+                  </Badge>
+                )}
                 {type === "pump" && hasOngoingPump && (
                   <Badge className="h-7 bg-blue-500 px-3 text-sm font-semibold text-white hover:bg-blue-500">
                     {t("common.ongoing")}

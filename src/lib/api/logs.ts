@@ -14,6 +14,7 @@ import {
   enrichPumpLog,
   mergeSideAmountsNote,
 } from "@/lib/pump-side-amounts"
+import { mergeNursingSessionNote } from "@/lib/nursing-timeline"
 
 export async function insertFeed(input: {
   babyId: string
@@ -667,6 +668,7 @@ export async function endNursing(
   endedAt: string,
   notes?: string,
   durationMin?: number,
+  sessionKey?: string,
 ) {
   const { data: feed, error: fetchError } = await supabase
     .from("feed_logs")
@@ -682,11 +684,15 @@ export async function endNursing(
     durationMin ??
     Math.max(1, Math.round((endMs - startMs) / 60_000))
 
+  const mergedNotes = sessionKey
+    ? mergeNursingSessionNote(notes ?? feed.notes, sessionKey)
+    : notes ?? feed.notes
+
   return updateFeed(feedId, {
     occurredAt: feed.occurred_at,
     feedType: "nursing",
     side: feed.side,
-    notes: notes ?? feed.notes,
+    notes: mergedNotes,
     durationMin: resolvedDuration,
     amountMl: null,
   })

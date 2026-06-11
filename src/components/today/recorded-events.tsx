@@ -42,8 +42,9 @@ import {
   type NursingSideKey,
   type SideNursingState,
 } from "@/lib/nursing-timer-session"
-import { deleteActivity } from "@/lib/api/logs"
+import { deleteActivity, deleteFeed } from "@/lib/api/logs"
 import { isEditableActivity } from "@/lib/activity-utils"
+import type { SavedNursingGroup } from "@/lib/nursing-timeline"
 import type { SleepTimelinePhase } from "@/lib/sleep-timeline"
 import type { ActivityItem, DiaperType } from "@/lib/types"
 import { cn } from "@/lib/utils"
@@ -153,6 +154,7 @@ export type PlacedActivity = {
   labelY: number
   displayAt: string
   sleepPhase?: SleepTimelinePhase
+  nursingGroup?: SavedNursingGroup
 }
 
 export type CardHeightChangeHandler = (id: string, heightPx: number) => void
@@ -196,7 +198,7 @@ type EventCardProps = {
 
 function EventCard({ event, now, onEdit, onDelete, onHeightChange }: EventCardProps) {
   const { t } = useTranslation()
-  const { item, displayAt, sleepPhase } = event
+  const { item, displayAt, sleepPhase, nursingGroup } = event
   const cardRef = useCardHeightReport(event.id, onHeightChange)
   const Icon = getRecordedIcon(item, sleepPhase)
   const editable =
@@ -227,7 +229,7 @@ function EventCard({ event, now, onEdit, onDelete, onHeightChange }: EventCardPr
           {activityTime(item, displayAt)}
         </p>
         <p className="text-sm leading-snug">
-          {activitySummary(item, { sleepPhase, now })}
+          {activitySummary(item, { sleepPhase, now, nursingGroup })}
         </p>
       </div>
       {editable && (
@@ -274,11 +276,21 @@ export function RecordedEvents({
   const { notifyActivityChanged } = useActivityRefresh()
   const [editingItem, setEditingItem] = useState<ActivityItem | null>(null)
 
-  async function handleDelete(item: ActivityItem) {
+  async function handleDelete(
+    item: ActivityItem,
+    nursingGroup?: SavedNursingGroup,
+  ) {
     if (!confirm(t("log.deleteConfirm"))) return
 
     try {
-      await deleteActivity(item)
+      if (nursingGroup) {
+        const feedIds = [nursingGroup.left?.id, nursingGroup.right?.id].filter(
+          (id): id is string => id != null,
+        )
+        await Promise.all(feedIds.map((id) => deleteFeed(id)))
+      } else {
+        await deleteActivity(item)
+      }
       toast.success(t("log.logDeleted"))
       notifyActivityChanged()
     } catch (err) {
@@ -302,7 +314,7 @@ export function RecordedEvents({
             event={event}
             now={now}
             onEdit={setEditingItem}
-            onDelete={handleDelete}
+            onDelete={(item) => handleDelete(item, event.nursingGroup)}
             onHeightChange={onCardHeightChange}
           />
         </div>

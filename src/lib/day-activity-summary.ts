@@ -3,10 +3,15 @@ import {
   feedTypeLabel,
 } from "@/components/log/activity-label"
 import i18n from "@/lib/i18n"
+import {
+  getNursingSessionDurationMin,
+  groupCompletedNursingFeeds,
+} from "@/lib/nursing-timeline"
 import { getPumpTotalMl } from "@/lib/pump-side-amounts"
 import type {
   ActivityItem,
   DiaperType,
+  FeedLog,
   FeedType,
 } from "@/lib/types"
 
@@ -47,10 +52,17 @@ function buildFeedSubSegments(
 
   let totalFeeds = 0
   let totalMl = 0
+  const nursingFeeds: FeedLog[] = []
 
   for (const item of activities) {
     if (item.kind !== "feed") continue
     const feed = item.data
+
+    if (feed.feed_type === "nursing") {
+      nursingFeeds.push(feed)
+      continue
+    }
+
     const bucket = stats[feed.feed_type]
     bucket.count++
     totalFeeds++
@@ -59,6 +71,31 @@ function buildFeedSubSegments(
       totalMl += feed.amount_ml
     }
     if (feed.duration_min) bucket.durationMin += feed.duration_min
+  }
+
+  const groupedNursing = groupCompletedNursingFeeds(nursingFeeds)
+  const groupedFeedIds = new Set<string>()
+
+  for (const group of groupedNursing.groups) {
+    stats.nursing.count++
+    totalFeeds++
+    stats.nursing.durationMin += getNursingSessionDurationMin(group)
+    if (group.left) groupedFeedIds.add(group.left.id)
+    if (group.right) groupedFeedIds.add(group.right.id)
+  }
+
+  for (const feed of groupedNursing.singles) {
+    stats.nursing.count++
+    totalFeeds++
+    groupedFeedIds.add(feed.id)
+    if (feed.duration_min) stats.nursing.durationMin += feed.duration_min
+  }
+
+  for (const feed of nursingFeeds) {
+    if (groupedFeedIds.has(feed.id)) continue
+    stats.nursing.count++
+    totalFeeds++
+    if (feed.duration_min) stats.nursing.durationMin += feed.duration_min
   }
 
   const subSegments: DaySummarySubSegment[] = []

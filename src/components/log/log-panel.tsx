@@ -681,7 +681,13 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
             1,
             Math.round(getSideElapsedSec(state) / 60),
           )
-          await endNursing(state.feedId, endedAt, undefined, durationMin)
+          await endNursing(
+            state.feedId,
+            endedAt,
+            undefined,
+            durationMin,
+            startedSides.length > 1 ? endedAt : undefined,
+          )
         }),
       )
 

@@ -14,6 +14,10 @@ import {
 import type { ActivityItem, FeedLog, SleepLog } from "@/lib/types"
 import { getPumpSideAmounts } from "@/lib/pump-side-amounts"
 import {
+  type SavedNursingGroup,
+  savedNursingSessionSummary,
+} from "@/lib/nursing-timeline"
+import {
   getSleepDurationMinutes,
   type SleepTimelinePhase,
 } from "@/lib/sleep-timeline"
@@ -33,6 +37,7 @@ export function diaperTypeLabel(type: string) {
 type ActivityLabelOptions = {
   sleepPhase?: SleepTimelinePhase
   now?: Date
+  nursingGroup?: SavedNursingGroup
 }
 
 export function activitySummary(
@@ -42,6 +47,9 @@ export function activitySummary(
   switch (item.kind) {
     case "feed": {
       const f = item.data
+      if (f.feed_type === "nursing" && options?.nursingGroup) {
+        return savedNursingSessionSummary(options.nursingGroup)
+      }
       const parts = [feedTypeLabel(f.feed_type)]
       if (f.amount_ml) parts.push(`${f.amount_ml} ml`)
       if (f.duration_min) parts.push(`${f.duration_min} ${i18n.t("activity.min")}`)

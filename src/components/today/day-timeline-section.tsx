@@ -42,6 +42,7 @@ import {
 } from "@/lib/baby-tracker-import"
 import { formatDayHeading, isSameDay, startOfDay } from "@/lib/format"
 import { expandActivitiesForTimeline } from "@/lib/sleep-timeline"
+import { collapseSavedNursingSessions } from "@/lib/nursing-timeline"
 import {
   getScaledLogCardHeightPx,
   getScaledPx,
@@ -471,6 +472,11 @@ export function DayTimelineSection({
   const daySummaryMinLabelY = getDaySummaryMinLabelY(daySummaryBottom)
   const daySummaryMaxLabelY = getDaySummaryMaxLabelY(layout.height)
 
+  const collapsedNursing = useMemo(
+    () => collapseSavedNursingSessions(activities),
+    [activities],
+  )
+
   const {
     recordedEvents,
     ongoingTimelineCards,
@@ -478,7 +484,11 @@ export function DayTimelineSection({
     ongoingConnectorAnchorYs,
   } =
     useMemo(() => {
-      const timelineEvents = expandActivitiesForTimeline(activities, date)
+      const timelineEvents = expandActivitiesForTimeline(
+        collapsedNursing.activities,
+        date,
+      )
+      const nursingGroups = collapsedNursing.nursingGroups
 
       const ongoing = isToday
         ? getOngoingTimelineCards(activities, date, now)
@@ -493,6 +503,10 @@ export function DayTimelineSection({
         id: event.id,
         displayAt: event.at,
         sleepPhase: event.sleepPhase,
+        nursingGroup:
+          event.item.kind === "feed"
+            ? nursingGroups.get(event.item.data.id)
+            : undefined,
         anchorY: getActivityPositionPx(event.at, items, layout),
         labelY: 0,
       }))
@@ -539,6 +553,7 @@ export function DayTimelineSection({
               activitySummary(event.item, {
                 sleepPhase: event.sleepPhase,
                 now,
+                nursingGroup: nursingGroups.get(event.item.data.id),
               }),
               cardWidth,
               isRecordedEventEditable(event.item, event.sleepPhase),

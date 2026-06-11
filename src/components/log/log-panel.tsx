@@ -20,7 +20,6 @@ import { MotherIcon } from "@/components/icons/mother-icon"
 import { useActivityRefresh } from "@/contexts/activity-refresh-context"
 import { useAuth } from "@/contexts/auth-context"
 import {
-  deleteFeed,
   endNursing,
   endSleep,
   getActiveNursingSessions,
@@ -700,30 +699,6 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
     }
   }
 
-  async function handleNursingDiscard() {
-    if (!confirm(t("log.discardSessionConfirm"))) return
-
-    setSubmitting(true)
-    try {
-      const feedIds = (["L", "R"] as const)
-        .map((sideKey) => nursingSides[sideKey].feedId)
-        .filter((id): id is string => id != null)
-
-      await Promise.all(feedIds.map((id) => deleteFeed(id)))
-
-      clearNursingTimerCache()
-      setNursingSidesPersisted(INITIAL_NURSING_SIDES)
-      toast.success(t("log.sessionDiscarded"))
-      afterSuccess()
-    } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : t("log.discardSessionFailed"),
-      )
-    } finally {
-      setSubmitting(false)
-    }
-  }
-
   async function handleSleepStart() {
     setSubmitting(true)
     try {
@@ -987,26 +962,15 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
                 </div>
               </div>
               {isNursingActive && (
-                <div className="grid grid-cols-2 gap-2">
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    className={LOG_SUBMIT_CLASS}
-                    onClick={() => void handleNursingDiscard()}
-                    disabled={submitting}
-                  >
-                    {t("log.discard")}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="secondary"
-                    className={LOG_SUBMIT_CLASS}
-                    onClick={handleNursingSaveAll}
-                    disabled={submitting}
-                  >
-                    {t("log.stopAndSave")}
-                  </Button>
-                </div>
+                <Button
+                  type="button"
+                  variant="secondary"
+                  className={LOG_SUBMIT_CLASS}
+                  onClick={handleNursingSaveAll}
+                  disabled={submitting}
+                >
+                  {t("log.stopAndSave")}
+                </Button>
               )}
             </div>
           ) : (

@@ -184,6 +184,11 @@ const en = {
     logDeleteFailed: "Failed to delete log",
     logOptions: "Log options",
   },
+  timeline: {
+    lastFed: "Last fed {{ago}} ago",
+    lastFedJustNow: "Last fed just now",
+    feedingNow: "Feeding now · {{ago}} ago",
+  },
   activity: {
     sleeping: "Sleeping",
     sleepStarted: "Sleep started",

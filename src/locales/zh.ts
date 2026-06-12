@@ -182,6 +182,11 @@ const zh = {
     logDeleteFailed: "删除记录失败",
     logOptions: "记录选项",
   },
+  timeline: {
+    lastFed: "上次喂奶 {{ago}}前",
+    lastFedJustNow: "上次喂奶 · 刚刚",
+    feedingNow: "正在喂奶 · {{ago}}前",
+  },
   activity: {
     sleeping: "正在睡觉",
     sleepStarted: "睡眠开始",

@@ -663,6 +663,27 @@ export async function getActiveNursingSessions(
   return (data ?? []) as FeedLog[]
 }
 
+export async function getLastFeedBefore(
+  babyId: string,
+  before: Date,
+): Promise<FeedLog | null> {
+  const { data, error } = await supabase
+    .from("feed_logs")
+    .select("*")
+    .eq("baby_id", babyId)
+    .lte("occurred_at", before.toISOString())
+    .order("occurred_at", { ascending: false })
+    .limit(10)
+
+  if (error) throw error
+
+  const feeds = (data ?? []) as FeedLog[]
+  const completed = feeds.find(
+    (feed) => feed.duration_min != null || feed.feed_type !== "nursing",
+  )
+  return completed ?? feeds[0] ?? null
+}
+
 export async function endNursing(
   feedId: string,
   endedAt: string,

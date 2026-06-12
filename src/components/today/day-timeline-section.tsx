@@ -43,6 +43,11 @@ import {
   mergeActivities,
 } from "@/lib/baby-tracker-import"
 import { formatDayHeading, formatElapsedClock, isSameDay, startOfDay } from "@/lib/format"
+import {
+  formatFeedingNowLabel,
+  formatLastFeedLabel,
+  resolveLastFeedAt,
+} from "@/lib/last-feed"
 import { expandActivitiesForTimeline } from "@/lib/sleep-timeline"
 import { collapseSavedNursingSessions } from "@/lib/nursing-timeline"
 import {
@@ -89,6 +94,7 @@ const DAY_SUMMARY_FIRST_LINE_HEIGHT_PX = 18
 const DAY_SUMMARY_VERTICAL_OFFSET_PX = -2
 const DAY_SUMMARY_BOTTOM_PADDING_PX = 12
 const DAY_SUMMARY_CARD_GAP_PX = 8
+const LAST_FEED_LABEL_HEIGHT_PX = 34 // text-xs line + p-2 vertical padding
 
 function getDaySummaryVerticalOffset(): number {
   return getScaledPx(DAY_SUMMARY_VERTICAL_OFFSET_PX)
@@ -123,6 +129,15 @@ function getDaySummaryMinLabelY(summaryBottom: number): number {
   const gap = getScaledPx(DAY_SUMMARY_CARD_GAP_PX)
 
   return summaryBottom + gap + cardHalf
+}
+
+function getLastFeedMinLabelY(
+  summaryBottom: number,
+  labelHalfHeight: number,
+): number {
+  if (summaryBottom <= 0) return 0
+
+  return summaryBottom + getScaledPx(DAY_SUMMARY_CARD_GAP_PX) + labelHalfHeight
 }
 
 function getDaySummaryMaxLabelY(layoutHeight: number): number {
@@ -208,6 +223,38 @@ function isRecordedEventEditable(
       sleepPhase === "end" ||
       (sleepPhase === "start" && item.kind === "sleep" && !item.data.ended_at))
   )
+}
+
+function cardBandsOverlap(
+  centerA: number,
+  halfA: number,
+  centerB: number,
+  halfB: number,
+  edgeGap: number,
+) {
+  return Math.abs(centerA - centerB) < halfA + halfB + edgeGap
+}
+
+function resolveLastFeedLabelY(
+  preferredY: number,
+  labelHalfHeight: number,
+  cardBands: { centerY: number; halfHeight: number }[],
+  edgeGap: number,
+) {
+  let y = preferredY
+
+  for (const band of cardBands) {
+    if (
+      cardBandsOverlap(y, labelHalfHeight, band.centerY, band.halfHeight, edgeGap)
+    ) {
+      y = Math.max(
+        y,
+        band.centerY + band.halfHeight + edgeGap + labelHalfHeight,
+      )
+    }
+  }
+
+  return y
 }
 
 const ICON_COLORS: Record<CheckpointIconKind, string> = {
@@ -323,11 +370,12 @@ export function DayTimelineSection({
   registerNowRef,
   registerDayStartRef,
 }: DayTimelineSectionProps) {
-  const { i18n } = useTranslation()
+  const { i18n, t } = useTranslation()
   const { version } = useActivityRefresh()
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
   const [logsVisible, setLogsVisible] = useState(false)
+  const [lastFeedAt, setLastFeedAt] = useState<string | null>(null)
 
   const stage = useMemo(
     () => getCurrentStage(date),
@@ -393,6 +441,23 @@ export function DayTimelineSection({
     if (version === 0) return
     void load({ silent: true })
   }, [version]) // eslint-disable-line react-hooks/exhaustive-deps -- refresh only on log changes
+
+  useEffect(() => {
+    if (!isToday || !babyId) {
+      setLastFeedAt(null)
+      return
+    }
+
+    let cancelled = false
+
+    void resolveLastFeedAt(babyId, now, activities).then((at) => {
+      if (!cancelled) setLastFeedAt(at)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [activities, babyId, isToday, now, version])
 
   useEffect(() => {
     if (loading) {
@@ -484,6 +549,7 @@ export function DayTimelineSection({
     ongoingTimelineCards,
     ongoingCardLabelYs,
     ongoingConnectorAnchorYs,
+    showLastFeedLabel,
   } =
     useMemo(() => {
       const timelineEvents = expandActivitiesForTimeline(
@@ -530,6 +596,10 @@ export function DayTimelineSection({
                 : nowAnchorY
             })
           : []
+
+      const hasOngoingFeed = ongoing.some((card) => card.item.kind === "feed")
+      const showLastFeedLabel =
+        isToday && nowAnchorY != null && (hasOngoingFeed || lastFeedAt != null)
 
       const preferredYs = [
         ...placed.map((event) => event.anchorY),
@@ -598,6 +668,7 @@ export function DayTimelineSection({
           (_, index) => labelYs[placed.length + index],
         ),
         ongoingConnectorAnchorYs: ongoingAnchorYs,
+        showLastFeedLabel,
       }
     }, [
       activities,
@@ -605,6 +676,7 @@ export function DayTimelineSection({
       daySummaryMinLabelY,
       daySummaryMaxLabelY,
       isToday,
+      lastFeedAt,
       now,
       items,
       layout,
@@ -613,6 +685,106 @@ export function DayTimelineSection({
       measuredCardHeights,
       nursingSides,
     ])
+
+  const lastFeedLabel = useMemo(() => {
+    if (!isToday) return null
+
+    const ongoingFeed = ongoingTimelineCards.find(
+      (card) => card.item.kind === "feed",
+    )
+    if (ongoingFeed) {
+      return formatFeedingNowLabel(ongoingFeed.item.at, now, t)
+    }
+
+    if (!lastFeedAt) return null
+    return formatLastFeedLabel(lastFeedAt, now, t)
+  }, [isToday, ongoingTimelineCards, lastFeedAt, now, i18n.language, t])
+
+  const lastFeedLabelY = useMemo(() => {
+    if (!showLastFeedLabel || nowPositionY === null) return null
+
+    const edgeGap = getScaledPx(DEFAULT_RECORDED_LABEL_EDGE_GAP_PX)
+    const labelHalf = getScaledPx(LAST_FEED_LABEL_HEIGHT_PX) / 2
+    const defaultCardHeight = getScaledLogCardHeightPx(
+      LOG_CARD_ESTIMATED_HEIGHT_PX,
+    )
+    const fontFamily =
+      typeof document !== "undefined"
+        ? getComputedStyle(document.body).fontFamily || "sans-serif"
+        : "sans-serif"
+    const cardWidth = connectorMetrics.cardWidth
+
+    const cardBands = [
+      ...recordedEvents.map((event) => ({
+        centerY: event.labelY,
+        halfHeight:
+          (measuredCardHeights[event.id] ??
+            estimateRecordedCardHeightPx(
+              activitySummary(event.item, {
+                sleepPhase: event.sleepPhase,
+                now,
+                nursingGroup: event.nursingGroup,
+              }),
+              cardWidth,
+              isRecordedEventEditable(event.item, event.sleepPhase),
+              fontFamily,
+            )) / 2,
+      })),
+      ...ongoingTimelineCards.map((card, index) => ({
+        centerY: ongoingCardLabelYs[index],
+        halfHeight:
+          (measuredCardHeights[card.id] ?? defaultCardHeight) / 2,
+      })),
+    ]
+
+    const hasNearbyCards = cardBands.some((band) =>
+      cardBandsOverlap(
+        nowPositionY,
+        labelHalf,
+        band.centerY,
+        band.halfHeight,
+        edgeGap,
+      ),
+    )
+
+    let preferredY = nowPositionY
+
+    if (ongoingTimelineCards.length > 0) {
+      let lowestOngoingBottom = 0
+      for (let index = 0; index < ongoingTimelineCards.length; index++) {
+        const card = ongoingTimelineCards[index]
+        const centerY = ongoingCardLabelYs[index]
+        const halfHeight =
+          (measuredCardHeights[card.id] ?? defaultCardHeight) / 2
+        lowestOngoingBottom = Math.max(
+          lowestOngoingBottom,
+          centerY + halfHeight,
+        )
+      }
+      preferredY = lowestOngoingBottom + edgeGap + labelHalf
+    } else if (!hasNearbyCards) {
+      preferredY = nowPositionY
+    }
+
+    const minY = getLastFeedMinLabelY(daySummaryBottom, labelHalf)
+    let y = resolveLastFeedLabelY(preferredY, labelHalf, cardBands, edgeGap)
+    if (minY > 0 && y < minY) {
+      y = resolveLastFeedLabelY(minY, labelHalf, cardBands, edgeGap)
+    }
+    return y
+  }, [
+    showLastFeedLabel,
+    nowPositionY,
+    now,
+    daySummaryBottom,
+    recordedEvents,
+    ongoingTimelineCards,
+    ongoingCardLabelYs,
+    measuredCardHeights,
+    connectorMetrics.cardWidth,
+    textSizeVersion,
+    i18n.language,
+  ])
 
   useEffect(() => {
     function measure() {
@@ -855,6 +1027,16 @@ export function DayTimelineSection({
               nursingSides={nursingSides}
               onCardHeightChange={handleCardHeightChange}
             />
+            {lastFeedLabelY !== null && lastFeedLabel && (
+              <div
+                className="pointer-events-none absolute right-0 left-6 z-[35] -translate-y-1/2"
+                style={{ top: lastFeedLabelY }}
+              >
+                <p className="text-muted-foreground w-full max-w-[320px] p-2 text-xs leading-snug">
+                  {lastFeedLabel}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       </div>

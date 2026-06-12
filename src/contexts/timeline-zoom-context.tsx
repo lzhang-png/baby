@@ -18,11 +18,14 @@ import {
   zoomOutPxPerMinute,
 } from "@/lib/schedule-utils"
 import {
+  easeOutBack,
   easeOutCubic,
   getScreenCenterAnchorOffset,
   getZoomScrollTop,
   loadTimelineZoom,
+  PINCH_BOUNCE_MS,
   prefersReducedMotion,
+  rubberBandPxPerMinute,
   saveTimelineZoom,
   ZOOM_ANIMATION_MS,
 } from "@/lib/timeline-zoom"
@@ -43,9 +46,12 @@ type PinchState = {
   startPx: number
   startScroll: number
   anchorOffset: number
+  /** Rubber-banded target while pinching (may overshoot past the limits). */
   targetPx: number
-  /** False once fingers lift; the animation settles to targetPx then stops. */
+  /** False once fingers lift; triggers the spring-back to the clamped value. */
   active: boolean
+  /** Set on release: timed bounce animation back to the clamped value. */
+  release: { start: number; from: number; to: number } | null
 }
 
 function getTouchDistance(touches: TouchList) {
@@ -55,8 +61,8 @@ function getTouchDistance(touches: TouchList) {
   )
 }
 
-/** Per-frame approach factor toward the pinch target (0..1). */
-const PINCH_SMOOTHING = 0.35
+/** Per-frame approach factor toward the pinch target (0..1). 1 = instant tracking. */
+const PINCH_SMOOTHING = 1
 
 export function TimelineZoomProvider({ children }: { children: ReactNode }) {
   const [pxPerMinute, setPxPerMinute] = useState(loadTimelineZoom)
@@ -96,10 +102,27 @@ export function TimelineZoomProvider({ children }: { children: ReactNode }) {
       )
     }
 
-    const pinchTick = () => {
+    const pinchTick = (now: number) => {
       const pinch = pinchRef.current
       if (!pinch) {
         pinchFrameRef.current = null
+        return
+      }
+
+      if (pinch.release) {
+        const { start, from, to } = pinch.release
+        const t = Math.min(1, (now - start) / PINCH_BOUNCE_MS)
+        applyPinchValue(pinch, from + (to - from) * easeOutBack(t))
+
+        if (t >= 1) {
+          applyPinchValue(pinch, to)
+          pinchRef.current = null
+          pinchFrameRef.current = null
+          saveTimelineZoom(to)
+          return
+        }
+
+        pinchFrameRef.current = requestAnimationFrame(pinchTick)
         return
       }
 
@@ -111,13 +134,6 @@ export function TimelineZoomProvider({ children }: { children: ReactNode }) {
           : current + delta * PINCH_SMOOTHING
 
       if (next !== current) applyPinchValue(pinch, next)
-
-      if (!pinch.active && next === pinch.targetPx) {
-        pinchRef.current = null
-        pinchFrameRef.current = null
-        saveTimelineZoom(pinch.targetPx)
-        return
-      }
 
       pinchFrameRef.current = requestAnimationFrame(pinchTick)
     }
@@ -145,6 +161,7 @@ export function TimelineZoomProvider({ children }: { children: ReactNode }) {
         anchorOffset: midY - el.getBoundingClientRect().top,
         targetPx: pxPerMinuteRef.current,
         active: true,
+        release: null,
       }
     }
 
@@ -155,10 +172,10 @@ export function TimelineZoomProvider({ children }: { children: ReactNode }) {
       event.preventDefault()
 
       const scale = getTouchDistance(event.touches) / pinch.startDistance
-      pinch.targetPx = clampPxPerMinute(pinch.startPx * scale)
+      pinch.targetPx = rubberBandPxPerMinute(pinch.startPx * scale)
 
       if (prefersReducedMotion()) {
-        applyPinchValue(pinch, pinch.targetPx)
+        applyPinchValue(pinch, clampPxPerMinute(pinch.targetPx))
         return
       }
 
@@ -170,10 +187,22 @@ export function TimelineZoomProvider({ children }: { children: ReactNode }) {
       if (!pinch || event.touches.length >= 2) return
 
       pinch.active = false
-      if (prefersReducedMotion() || pinchFrameRef.current === null) {
+
+      const settled = clampPxPerMinute(pinch.targetPx)
+
+      if (prefersReducedMotion()) {
+        applyPinchValue(pinch, settled)
         pinchRef.current = null
-        saveTimelineZoom(pxPerMinuteRef.current)
+        saveTimelineZoom(settled)
+        return
       }
+
+      pinch.release = {
+        start: performance.now(),
+        from: pxPerMinuteRef.current,
+        to: settled,
+      }
+      startPinchAnimation()
     }
 
     el.addEventListener("touchstart", onTouchStart, { passive: true })

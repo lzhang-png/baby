@@ -1,6 +1,8 @@
 import {
   clampPxPerMinute,
   DEFAULT_PX_PER_MINUTE,
+  MAX_PX_PER_MINUTE,
+  MIN_PX_PER_MINUTE,
 } from "@/lib/schedule-utils"
 import { safeGetItem, safeSetItem } from "@/lib/safe-storage"
 
@@ -19,10 +21,39 @@ export function saveTimelineZoom(pxPerMinute: number) {
   safeSetItem(STORAGE_KEY, String(pxPerMinute))
 }
 
-export const ZOOM_ANIMATION_MS = 300
+export const ZOOM_ANIMATION_MS = 100
+
+/** Duration of the spring-back when releasing a pinch past the zoom limit. */
+export const PINCH_BOUNCE_MS = 320
+
+/** How far (px/min) the pinch may stretch past a limit before fully resisting. */
+const RUBBER_BAND_RANGE = 1.6
 
 export function easeOutCubic(t: number) {
   return 1 - (1 - t) ** 3
+}
+
+/** Overshoots past 1 then settles back — produces a bounce when easing to a target. */
+export function easeOutBack(t: number) {
+  const c1 = 2.2
+  const c3 = c1 + 1
+  return 1 + c3 * (t - 1) ** 3 + c1 * (t - 1) ** 2
+}
+
+/**
+ * Allow zoom to stretch slightly past the min/max with diminishing give, so a
+ * pinch beyond the limit visibly resists instead of stopping dead.
+ */
+export function rubberBandPxPerMinute(px: number) {
+  if (px > MAX_PX_PER_MINUTE) {
+    const over = px - MAX_PX_PER_MINUTE
+    return MAX_PX_PER_MINUTE + RUBBER_BAND_RANGE * (1 - 1 / (over / RUBBER_BAND_RANGE + 1))
+  }
+  if (px < MIN_PX_PER_MINUTE) {
+    const under = MIN_PX_PER_MINUTE - px
+    return MIN_PX_PER_MINUTE - RUBBER_BAND_RANGE * (1 - 1 / (under / RUBBER_BAND_RANGE + 1))
+  }
+  return px
 }
 
 export function prefersReducedMotion() {

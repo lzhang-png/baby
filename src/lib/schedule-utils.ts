@@ -158,48 +158,30 @@ export function getItemPositionPercent(item: ScheduleTimelineItem): number {
   return (item.normalizedMinutes / DAY_MINUTES) * 100
 }
 
-export const TIMELINE_ZOOM_LEVELS = [2, 3, 5, 8] as const
+export const MIN_PX_PER_MINUTE = 2
+export const MAX_PX_PER_MINUTE = 8
+export const DEFAULT_PX_PER_MINUTE = 3
 
-export const DEFAULT_PX_PER_MINUTE: number = TIMELINE_ZOOM_LEVELS[1]
-export const MIN_PX_PER_MINUTE = TIMELINE_ZOOM_LEVELS[0]
-export const MAX_PX_PER_MINUTE =
-  TIMELINE_ZOOM_LEVELS[TIMELINE_ZOOM_LEVELS.length - 1]
-
-export function getZoomLevelIndex(px: number) {
-  for (let i = 0; i < TIMELINE_ZOOM_LEVELS.length; i++) {
-    if (Math.abs(TIMELINE_ZOOM_LEVELS[i] - px) < 0.01) return i
-  }
-
-  for (let i = 0; i < TIMELINE_ZOOM_LEVELS.length - 1; i++) {
-    if (px >= TIMELINE_ZOOM_LEVELS[i] && px <= TIMELINE_ZOOM_LEVELS[i + 1]) {
-      return i
-    }
-  }
-
-  if (px < TIMELINE_ZOOM_LEVELS[0]) return 0
-  return TIMELINE_ZOOM_LEVELS.length - 1
-}
+const ZOOM_BUTTON_FACTOR = 1.25
 
 export function clampPxPerMinute(px: number) {
-  return TIMELINE_ZOOM_LEVELS[getZoomLevelIndex(px)]
+  return Math.min(MAX_PX_PER_MINUTE, Math.max(MIN_PX_PER_MINUTE, px))
 }
 
 export function zoomInPxPerMinute(px: number) {
-  const index = getZoomLevelIndex(px)
-  return TIMELINE_ZOOM_LEVELS[Math.min(index + 1, TIMELINE_ZOOM_LEVELS.length - 1)]
+  return clampPxPerMinute(px * ZOOM_BUTTON_FACTOR)
 }
 
 export function zoomOutPxPerMinute(px: number) {
-  const index = getZoomLevelIndex(px)
-  return TIMELINE_ZOOM_LEVELS[Math.max(index - 1, 0)]
+  return clampPxPerMinute(px / ZOOM_BUTTON_FACTOR)
 }
 
 export function canZoomIn(px: number) {
-  return getZoomLevelIndex(px) < TIMELINE_ZOOM_LEVELS.length - 1
+  return px < MAX_PX_PER_MINUTE - 0.001
 }
 
 export function canZoomOut(px: number) {
-  return getZoomLevelIndex(px) > 0
+  return px > MIN_PX_PER_MINUTE + 0.001
 }
 
 export type SpreadTimelineLayout = {

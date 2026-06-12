@@ -37,6 +37,7 @@ import {
   TIMELINE_MUTED_LINE_CLASS,
 } from "@/components/today/recorded-events"
 import { useActivityRefresh } from "@/contexts/activity-refresh-context"
+import { useTimelineFilter } from "@/contexts/timeline-filter-context"
 import { getActivitiesForDay } from "@/lib/api/logs"
 import {
   getImportedActivitiesForDay,
@@ -372,6 +373,7 @@ export function DayTimelineSection({
 }: DayTimelineSectionProps) {
   const { i18n, t } = useTranslation()
   const { version } = useActivityRefresh()
+  const { isKindEnabled } = useTimelineFilter()
   const [activities, setActivities] = useState<ActivityItem[]>([])
   const [loading, setLoading] = useState(true)
   const [logsVisible, setLogsVisible] = useState(false)
@@ -442,8 +444,18 @@ export function DayTimelineSection({
     void load({ silent: true })
   }, [version]) // eslint-disable-line react-hooks/exhaustive-deps -- refresh only on log changes
 
+  const filteredActivities = useMemo(
+    () => activities.filter((item) => isKindEnabled(item.kind)),
+    [activities, isKindEnabled],
+  )
+
   useEffect(() => {
     if (!isToday || !babyId) {
+      setLastFeedAt(null)
+      return
+    }
+
+    if (!isKindEnabled("feed")) {
       setLastFeedAt(null)
       return
     }
@@ -457,7 +469,7 @@ export function DayTimelineSection({
     return () => {
       cancelled = true
     }
-  }, [activities, babyId, isToday, now, version])
+  }, [activities, babyId, isKindEnabled, isToday, now, version])
 
   useEffect(() => {
     if (loading) {
@@ -496,10 +508,10 @@ export function DayTimelineSection({
   const estimatedDaySummaryBottom = useMemo(
     () =>
       getEstimatedDaySummaryBottom(
-        activities,
+        filteredActivities,
         getCheckpointRowTopY(layout.midnightY),
       ),
-    [activities, layout.midnightY, textSizeVersion, i18n.language],
+    [filteredActivities, layout.midnightY, textSizeVersion, i18n.language],
   )
 
   const [measuredDaySummaryBottom, setMeasuredDaySummaryBottom] = useState(0)
@@ -530,7 +542,7 @@ export function DayTimelineSection({
       observer.disconnect()
       window.removeEventListener("resize", measure)
     }
-  }, [activities, layout.midnightY, textSizeVersion, i18n.language, loading])
+  }, [filteredActivities, layout.midnightY, textSizeVersion, i18n.language, loading])
 
   const daySummaryBottom = Math.max(
     estimatedDaySummaryBottom,
@@ -540,8 +552,8 @@ export function DayTimelineSection({
   const daySummaryMaxLabelY = getDaySummaryMaxLabelY(layout.height)
 
   const collapsedNursing = useMemo(
-    () => collapseSavedNursingSessions(activities),
-    [activities],
+    () => collapseSavedNursingSessions(filteredActivities),
+    [filteredActivities],
   )
 
   const {
@@ -559,7 +571,7 @@ export function DayTimelineSection({
       const nursingGroups = collapsedNursing.nursingGroups
 
       const ongoing = isToday
-        ? getOngoingTimelineCards(activities, date, now)
+        ? getOngoingTimelineCards(filteredActivities, date, now)
         : []
 
       const placed = timelineEvents
@@ -597,9 +609,14 @@ export function DayTimelineSection({
             })
           : []
 
-      const hasOngoingFeed = ongoing.some((card) => card.item.kind === "feed")
+      const hasOngoingFeed =
+        isKindEnabled("feed") &&
+        ongoing.some((card) => card.item.kind === "feed")
       const showLastFeedLabel =
-        isToday && nowAnchorY != null && (hasOngoingFeed || lastFeedAt != null)
+        isToday &&
+        nowAnchorY != null &&
+        isKindEnabled("feed") &&
+        (hasOngoingFeed || lastFeedAt != null)
 
       const preferredYs = [
         ...placed.map((event) => event.anchorY),
@@ -671,10 +688,12 @@ export function DayTimelineSection({
         showLastFeedLabel,
       }
     }, [
-      activities,
+      collapsedNursing,
       date,
       daySummaryMinLabelY,
       daySummaryMaxLabelY,
+      filteredActivities,
+      isKindEnabled,
       isToday,
       lastFeedAt,
       now,
@@ -1012,7 +1031,7 @@ export function DayTimelineSection({
                   getDaySummaryVerticalOffset(),
               }}
             >
-              <DayActivitySummary activities={activities} />
+              <DayActivitySummary activities={filteredActivities} />
             </div>
             <RecordedEvents
               events={recordedEvents}

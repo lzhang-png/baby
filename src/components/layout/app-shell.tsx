@@ -1,17 +1,13 @@
 import { useCallback, useState } from "react"
 import { useTranslation } from "react-i18next"
-import { NavLink, Outlet, useLocation } from "react-router-dom"
+import { Outlet, useLocation } from "react-router-dom"
 import {
-  CalendarDaysIcon,
   CirclePlusIcon,
-  ClipboardListIcon,
-  MenuIcon,
+  FilterIcon,
   MilkIcon,
   MoonIcon,
+  SettingsIcon,
   ScrollTextIcon,
-  UsersIcon,
-  ZoomInIcon,
-  ZoomOutIcon,
   type LucideIcon,
 } from "lucide-react"
 
@@ -19,11 +15,14 @@ import { PumpIcon } from "@/components/icons/pump-icon"
 import { DiaperIcon } from "@/components/icons/diaper-icon"
 import { LogPanel, type LogPanelType } from "@/components/log/log-panel"
 import { DaySummariesPanel } from "@/components/today/day-summaries-panel"
+import { SettingsPanel } from "@/components/settings/settings-panel"
+import { TimelineFilterPanel } from "@/components/today/timeline-filter-panel"
 import { RECORDED_COLORS } from "@/components/today/recorded-events"
 import { ActivityRefreshProvider } from "@/contexts/activity-refresh-context"
 import { useAuth } from "@/contexts/auth-context"
 import { LogPanelProvider } from "@/contexts/log-panel-context"
-import { TimelineZoomProvider, useTimelineZoom } from "@/contexts/timeline-zoom-context"
+import { TimelineFilterProvider, useTimelineFilter } from "@/contexts/timeline-filter-context"
+import { TimelineZoomProvider } from "@/contexts/timeline-zoom-context"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
@@ -44,20 +43,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 
-type NavItem = {
-  to: string
-  labelKey: "nav.timeline" | "nav.schedule" | "nav.settings"
-  icon: LucideIcon
-}
-
-const NAV: NavItem[] = [
-  { to: "/today", labelKey: "nav.timeline", icon: CalendarDaysIcon },
-  { to: "/schedule", labelKey: "nav.schedule", icon: ClipboardListIcon },
-  { to: "/family", labelKey: "nav.settings", icon: UsersIcon },
-]
-
 const FAB_BOTTOM = "calc(1rem + env(safe-area-inset-bottom, 0px))"
 const FAB_CLASS = "size-14 rounded-full shadow-lg"
+
+type BottomPanel =
+  | { mode: "log"; logType: LogPanelType }
+  | { mode: "filter" }
+  | null
 
 type LogMenuItem = {
   type: LogPanelType
@@ -76,55 +68,34 @@ function isNavItemActive(pathname: string, to: string) {
   return pathname === to || pathname.endsWith(to)
 }
 
-function NavMenuItem({ item }: { item: NavItem }) {
-  const { t } = useTranslation()
-  const { pathname } = useLocation()
-  const Icon = item.icon
-  const isActive = isNavItemActive(pathname, item.to)
-
-  return (
-    <DropdownMenuItem
-      asChild
-      className={cn(
-        "min-h-12 gap-3 px-3 py-3 text-base font-medium [&_svg]:size-5",
-        isActive &&
-          "bg-secondary text-foreground font-semibold focus:bg-secondary focus:text-foreground",
-      )}
-    >
-      <NavLink
-        to={item.to}
-        aria-current={isActive ? "page" : undefined}
-        className="flex w-full items-center gap-3"
-      >
-        <Icon aria-hidden />
-        {t(item.labelKey)}
-      </NavLink>
-    </DropdownMenuItem>
-  )
-}
-
 function BottomFabBar({
-  logOpen,
+  panelOpen,
   summaryOpen,
+  settingsOpen,
   onLogSelect,
+  onFilterOpen,
   onSummaryOpen,
+  onSettingsOpen,
 }: {
-  logOpen: boolean
+  panelOpen: boolean
   summaryOpen: boolean
+  settingsOpen: boolean
   onLogSelect: (type: LogPanelType) => void
+  onFilterOpen: () => void
   onSummaryOpen: () => void
+  onSettingsOpen: () => void
 }) {
   const { t } = useTranslation()
   const { baby } = useAuth()
   const { pathname } = useLocation()
   const isTimelinePage = isNavItemActive(pathname, "/today")
-  const { zoomInEnabled, zoomOutEnabled, zoomIn, zoomOut } = useTimelineZoom()
+  const { filterActive } = useTimelineFilter()
   const pumpSides = usePumpTimerSession(baby?.id)
   const hasOngoingPump = hasOngoingPumpSession(pumpSides)
   const nursingSides = useNursingTimerSession(baby?.id)
   const hasOngoingNursing = hasOngoingNursingSession(nursingSides)
 
-  if (logOpen || summaryOpen) return null
+  if (panelOpen || summaryOpen || settingsOpen) return null
 
   return (
     <div
@@ -137,54 +108,40 @@ function BottomFabBar({
             type="button"
             size="icon"
             variant="secondary"
-            aria-label={t("common.zoomOut")}
-            disabled={!zoomOutEnabled}
+            aria-label={t("nav.settings")}
             className={FAB_CLASS}
-            onClick={zoomOut}
+            onClick={onSettingsOpen}
           >
-            <ZoomOutIcon className="size-6" aria-hidden />
+            <SettingsIcon className="size-6" aria-hidden />
           </Button>
           <Button
             type="button"
             size="icon"
             variant="secondary"
-            aria-label={t("common.zoomIn")}
-            disabled={!zoomInEnabled}
+            aria-label={t("nav.summary")}
             className={FAB_CLASS}
-            onClick={zoomIn}
+            onClick={onSummaryOpen}
           >
-            <ZoomInIcon className="size-6" aria-hidden />
+            <ScrollTextIcon className="size-6" aria-hidden />
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="secondary"
+            aria-label={t("timeline.filterLogs")}
+            className={cn(FAB_CLASS, "relative")}
+            onClick={onFilterOpen}
+          >
+            <FilterIcon className="size-6" aria-hidden />
+            {filterActive && (
+              <span
+                aria-hidden
+                className="absolute top-2.5 right-2.5 size-2.5 rounded-full bg-blue-500 ring-2 ring-secondary"
+              />
+            )}
           </Button>
         </>
       )}
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            size="icon"
-            variant="secondary"
-            aria-label={t("nav.openMenu")}
-            className={FAB_CLASS}
-          >
-            <MenuIcon className="size-6" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent side="top" align="end" className="min-w-52 p-2">
-          <DropdownMenuGroup>
-            <NavMenuItem item={NAV[0]} />
-            <DropdownMenuItem
-              className="min-h-12 gap-3 px-3 py-3 text-base font-medium [&_svg]:size-5"
-              onSelect={onSummaryOpen}
-            >
-              <ScrollTextIcon aria-hidden />
-              {t("nav.summary")}
-            </DropdownMenuItem>
-            {NAV.slice(1).map((item) => (
-              <NavMenuItem key={item.to} item={item} />
-            ))}
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
 
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
@@ -229,17 +186,19 @@ function BottomFabBar({
 }
 
 export function AppShell() {
-  const [logPanelType, setLogPanelType] = useState<LogPanelType | null>(null)
+  const [bottomPanel, setBottomPanel] = useState<BottomPanel>(null)
   const [summaryOpen, setSummaryOpen] = useState(false)
-  const logOpen = logPanelType !== null
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const panelOpen = bottomPanel !== null
   const { pathname } = useLocation()
   const isTimelinePage = isNavItemActive(pathname, "/today")
   const openLogPanel = useCallback((type: LogPanelType) => {
-    setLogPanelType(type)
+    setBottomPanel({ mode: "log", logType: type })
   }, [])
 
   return (
     <ActivityRefreshProvider>
+      <TimelineFilterProvider>
       <LogPanelProvider openLogPanel={openLogPanel}>
       <TimelineZoomProvider>
       <div className="bg-background flex h-svh flex-col overflow-hidden">
@@ -254,16 +213,19 @@ export function AppShell() {
       </main>
 
       <BottomFabBar
-        logOpen={logOpen}
+        panelOpen={panelOpen}
         summaryOpen={summaryOpen}
-        onLogSelect={setLogPanelType}
+        settingsOpen={settingsOpen}
+        onLogSelect={(type) => setBottomPanel({ mode: "log", logType: type })}
+        onFilterOpen={() => setBottomPanel({ mode: "filter" })}
         onSummaryOpen={() => setSummaryOpen(true)}
+        onSettingsOpen={() => setSettingsOpen(true)}
       />
 
       <Drawer
-        open={logOpen}
+        open={panelOpen}
         onOpenChange={(open) => {
-          if (!open) setLogPanelType(null)
+          if (!open) setBottomPanel(null)
         }}
         direction="bottom"
         handleOnly
@@ -273,11 +235,13 @@ export function AppShell() {
           showHandle={false}
           className="min-w-0 bg-background pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]"
         >
-          {logPanelType ? (
+          {bottomPanel?.mode === "log" ? (
             <LogPanel
-              type={logPanelType}
-              onLogged={() => setLogPanelType(null)}
+              type={bottomPanel.logType}
+              onLogged={() => setBottomPanel(null)}
             />
+          ) : bottomPanel?.mode === "filter" ? (
+            <TimelineFilterPanel />
           ) : null}
         </DrawerContent>
       </Drawer>
@@ -293,9 +257,22 @@ export function AppShell() {
           <DaySummariesPanel open={summaryOpen} />
         </DrawerContent>
       </Drawer>
+
+      <Drawer
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        direction="bottom"
+        handleOnly
+        repositionInputs={false}
+      >
+        <DrawerContent className="min-w-0 bg-background">
+          <SettingsPanel open={settingsOpen} />
+        </DrawerContent>
+      </Drawer>
       </div>
       </TimelineZoomProvider>
       </LogPanelProvider>
+      </TimelineFilterProvider>
     </ActivityRefreshProvider>
   )
 }

@@ -32,7 +32,7 @@ function HeroStat({ value, label }: { value: string; label: string }) {
   )
 }
 
-export function SchedulePage() {
+export function SchedulePanelContent() {
   const { t } = useTranslation()
   const { baby } = useAuth()
   const { stages, comparisonRows } = useLocalizedSchedule()
@@ -65,25 +65,25 @@ export function SchedulePage() {
   ]
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-6 pb-2">
       <header className="flex flex-col gap-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-2.5">
             <span className="bg-primary/10 text-primary flex size-9 items-center justify-center rounded-lg">
               <BabyIcon className="size-5" />
             </span>
-            <h1 className="text-2xl font-semibold tracking-tight">
+            <h2 className="text-xl font-semibold tracking-tight">
               {t("schedule.pageTitle", { name: babyName })}
-            </h1>
+            </h2>
           </div>
           <Badge variant="secondary">{t("schedule.born")}</Badge>
         </div>
-        <p className="text-muted-foreground max-w-3xl text-sm leading-relaxed">
+        <p className="text-muted-foreground text-sm leading-relaxed">
           {t("schedule.intro")}
         </p>
       </header>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         {heroStats.map((s) => (
           <HeroStat key={s.label} {...s} />
         ))}
@@ -97,9 +97,9 @@ export function SchedulePage() {
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-xl font-semibold tracking-tight">
+          <h3 className="text-lg font-semibold tracking-tight">
             {t("schedule.trendsTitle")}
-          </h2>
+          </h3>
           <p className="text-muted-foreground text-sm">
             {t("schedule.trendsSubtitle")}
           </p>
@@ -110,10 +110,10 @@ export function SchedulePage() {
       <Separator />
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-xl font-semibold tracking-tight">
+        <h3 className="text-lg font-semibold tracking-tight">
           {t("schedule.glanceTitle")}
-        </h2>
-        <div className="bg-card overflow-hidden rounded-lg border">
+        </h3>
+        <div className="bg-card overflow-x-auto rounded-lg border">
           <Table>
             <TableHeader>
               <TableRow>
@@ -143,9 +143,9 @@ export function SchedulePage() {
 
       <section className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
-          <h2 className="text-xl font-semibold tracking-tight">
+          <h3 className="text-lg font-semibold tracking-tight">
             {t("schedule.sampleDayTitle")}
-          </h2>
+          </h3>
           <p className="text-muted-foreground text-sm">
             {t("schedule.sampleDaySubtitle")}
           </p>
@@ -156,10 +156,10 @@ export function SchedulePage() {
       <Separator />
 
       <section className="flex flex-col gap-4">
-        <h2 className="text-xl font-semibold tracking-tight">
+        <h3 className="text-lg font-semibold tracking-tight">
           {t("schedule.habitsTitle")}
-        </h2>
-        <div className="grid gap-4 md:grid-cols-2">
+        </h3>
+        <div className="flex flex-col gap-4">
           {habits.map((group) => (
             <Card key={group.title}>
               <CardHeader>

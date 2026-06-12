@@ -1,6 +1,7 @@
 const en = {
   common: {
     loading: "Loading…",
+    back: "Back",
     today: "Today",
     now: "Now",
     goDownToNow: "Go down to now",
@@ -109,6 +110,8 @@ const en = {
     languageDescription: "Choose the language for the app interface.",
     appearanceDescription: "Choose light, medium, dark, or follow system settings.",
     textSizeDescription: "Adjust the text size across the app.",
+    scheduleDescription: "View feeding, sleep, and routine guidance by age.",
+    viewSchedule: "Open schedule",
   },
   log: {
     feed: "Feed",
@@ -188,6 +191,9 @@ const en = {
     lastFed: "Last fed {{ago}} ago",
     lastFedJustNow: "Last fed just now",
     feedingNow: "Feeding now · {{ago}} ago",
+    filterLogs: "Filter timeline logs",
+    filterTitle: "Filter logs",
+    filterReset: "Reset",
   },
   activity: {
     sleeping: "Sleeping",

@@ -1,6 +1,7 @@
 const zh = {
   common: {
     loading: "加载中…",
+    back: "返回",
     today: "今天",
     now: "现在",
     goDownToNow: "滚动到现在",
@@ -107,6 +108,8 @@ const zh = {
     languageDescription: "选择应用界面显示的语言。",
     appearanceDescription: "选择浅色、中等、深色，或跟随系统设置。",
     textSizeDescription: "调整应用内文字显示大小。",
+    scheduleDescription: "按阶段查看喂奶、睡眠与日常作息建议。",
+    viewSchedule: "打开作息表",
   },
   log: {
     feed: "喂奶",
@@ -186,6 +189,9 @@ const zh = {
     lastFed: "上次喂奶 {{ago}}前",
     lastFedJustNow: "上次喂奶 · 刚刚",
     feedingNow: "正在喂奶 · {{ago}}前",
+    filterLogs: "筛选时间线记录",
+    filterTitle: "筛选记录",
+    filterReset: "重置",
   },
   activity: {
     sleeping: "正在睡觉",

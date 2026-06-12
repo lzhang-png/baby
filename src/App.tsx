@@ -7,8 +7,6 @@ import { AppShell } from "@/components/layout/app-shell"
 import { LoginPage } from "@/pages/login-page"
 import { SignupPage } from "@/pages/signup-page"
 import { TodayPage } from "@/pages/today-page"
-import { SchedulePage } from "@/pages/schedule-page"
-import { FamilyPage } from "@/pages/family-page"
 
 const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, "")
 
@@ -26,8 +24,8 @@ export default function App() {
                 <Route index element={<Navigate to="/today" replace />} />
                 <Route path="today" element={<TodayPage />} />
                 <Route path="log" element={<Navigate to="/today" replace />} />
-                <Route path="schedule" element={<SchedulePage />} />
-                <Route path="family" element={<FamilyPage />} />
+                <Route path="schedule" element={<Navigate to="/today" replace />} />
+                <Route path="family" element={<Navigate to="/today" replace />} />
               </Route>
             </Route>
           </Route>

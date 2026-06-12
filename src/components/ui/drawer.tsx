@@ -57,7 +57,7 @@ function DrawerHandleBar({ className }: { className?: string }) {
   return (
     <div
       aria-hidden
-      className={cn("mx-auto h-1 w-[100px] shrink-0 rounded-full bg-muted", className)}
+      className={cn("mx-auto h-1 w-[100px] shrink-0 rounded-full bg-drawer-handle", className)}
     />
   )
 }
@@ -133,7 +133,7 @@ function DrawerHeader({ className, ...props }: React.ComponentProps<"div">) {
     <div
       data-slot="drawer-header"
       className={cn(
-        "flex flex-col gap-0.5 p-4 group-data-[vaul-drawer-direction=bottom]/drawer-content:text-center group-data-[vaul-drawer-direction=top]/drawer-content:text-center",
+        "flex flex-col gap-0.5 px-4 py-2.5 group-data-[vaul-drawer-direction=bottom]/drawer-content:text-center group-data-[vaul-drawer-direction=top]/drawer-content:text-center",
         className
       )}
       {...props}

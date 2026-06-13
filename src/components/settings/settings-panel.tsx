@@ -22,6 +22,11 @@ import {
 } from "@/components/ui/card"
 import { DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 import { SegmentedControl } from "@/components/ui/segmented-control"
+import {
+  type BackgroundEffect,
+  getStoredBackgroundEffect,
+  setBackgroundEffect,
+} from "@/lib/background-setting"
 import { type AppLocale, setAppLanguage } from "@/lib/i18n"
 import {
   getStoredTextSize,
@@ -45,6 +50,9 @@ export function SettingsPanel({ open }: SettingsPanelProps) {
   const [view, setView] = useState<SettingsView>("root")
   const [themeReady, setThemeReady] = useState(false)
   const [textSize, setTextSize] = useState<TextSize>(() => getStoredTextSize())
+  const [background, setBackground] = useState<BackgroundEffect>(() =>
+    getStoredBackgroundEffect(),
+  )
 
   useEffect(() => {
     if (open) {
@@ -67,6 +75,11 @@ export function SettingsPanel({ open }: SettingsPanelProps) {
   function handleTextSizeChange(value: TextSize) {
     setTextSize(value)
     setAppTextSize(value)
+  }
+
+  function handleBackgroundChange(value: BackgroundEffect) {
+    setBackground(value)
+    setBackgroundEffect(value)
   }
 
   if (view === "schedule") {
@@ -174,6 +187,29 @@ export function SettingsPanel({ open }: SettingsPanelProps) {
                   { value: "small", label: t("common.textSizeSmall") },
                   { value: "default", label: t("common.textSizeDefault") },
                   { value: "large", label: t("common.textSizeLarge") },
+                ]}
+              />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">
+                {t("common.backgroundEffect")}
+              </CardTitle>
+              <CardDescription>
+                {t("family.backgroundEffectDescription")}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <SegmentedControl
+                value={background}
+                onValueChange={handleBackgroundChange}
+                options={[
+                  { value: "off", label: t("common.off") },
+                  { value: "aurora", label: t("common.bgAurora") },
+                  { value: "bubbles", label: t("common.bgBubbles") },
+                  { value: "stars", label: t("common.bgStars") },
                 ]}
               />
             </CardContent>

@@ -87,6 +87,12 @@
     --timeline-line: oklch(0.78 0 0);
     --drawer-handle: oklch(0.78 0 0);
     --ongoing-card-pulse-peak: oklch(0.96 0.04 235);
+    --aurora-1: oklch(0.86 0.11 250);
+    --aurora-2: oklch(0.85 0.12 320);
+    --aurora-3: oklch(0.88 0.11 180);
+    --aurora-4: oklch(0.90 0.10 40);
+    --aurora-opacity: 0.55;
+    --star-color: oklch(0.72 0.13 285);
 }
 
 .medium {
@@ -124,6 +130,12 @@
     --timeline-line: oklch(0.44 0.05 248);
     --drawer-handle: oklch(0.58 0.05 248);
     --ongoing-card-pulse-peak: oklch(0.44 0.08 235);
+    --aurora-1: oklch(0.62 0.16 255);
+    --aurora-2: oklch(0.58 0.18 305);
+    --aurora-3: oklch(0.62 0.14 200);
+    --aurora-4: oklch(0.64 0.13 165);
+    --aurora-opacity: 0.45;
+    --star-color: oklch(0.95 0.02 248);
 }
 
 .dark {
@@ -161,6 +173,12 @@
     --timeline-line: oklch(0.48 0 0);
     --drawer-handle: oklch(0.42 0 0);
     --ongoing-card-pulse-peak: oklch(0.23 0.06 235);
+    --aurora-1: oklch(0.55 0.17 260);
+    --aurora-2: oklch(0.52 0.19 310);
+    --aurora-3: oklch(0.55 0.15 200);
+    --aurora-4: oklch(0.56 0.14 30);
+    --aurora-opacity: 0.40;
+    --star-color: oklch(0.98 0 0);
 }
 
 @layer base {
@@ -219,6 +237,184 @@
 
 .ongoing-card-pulse {
   animation: ongoing-card-pulse 2.8s ease-in-out infinite;
+}
+
+/* ---------------------------------------------------------------------------
+   Decorative app backgrounds (aurora / bubbles / stars) behind all content.
+   --------------------------------------------------------------------------- */
+.app-bg {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  contain: strict;
+  opacity: var(--aurora-opacity);
+}
+
+/* Aurora: slow-drifting blurred gradient blobs. */
+
+.aurora-blob {
+  position: absolute;
+  border-radius: 9999px;
+  filter: blur(60px);
+  will-change: transform;
+}
+
+@media (min-width: 640px) {
+  .aurora-blob {
+    filter: blur(90px);
+  }
+}
+
+.aurora-blob-1 {
+  top: -12%;
+  left: -10%;
+  width: 60vw;
+  height: 60vw;
+  max-width: 620px;
+  max-height: 620px;
+  background: radial-gradient(circle at center, var(--aurora-1), transparent 70%);
+  animation: aurora-drift-1 26s ease-in-out infinite alternate;
+}
+
+.aurora-blob-2 {
+  top: -8%;
+  right: -14%;
+  width: 55vw;
+  height: 55vw;
+  max-width: 560px;
+  max-height: 560px;
+  background: radial-gradient(circle at center, var(--aurora-2), transparent 70%);
+  animation: aurora-drift-2 32s ease-in-out infinite alternate;
+}
+
+.aurora-blob-3 {
+  bottom: -16%;
+  left: 6%;
+  width: 58vw;
+  height: 58vw;
+  max-width: 600px;
+  max-height: 600px;
+  background: radial-gradient(circle at center, var(--aurora-3), transparent 70%);
+  animation: aurora-drift-3 29s ease-in-out infinite alternate;
+}
+
+.aurora-blob-4 {
+  bottom: -12%;
+  right: -8%;
+  width: 50vw;
+  height: 50vw;
+  max-width: 520px;
+  max-height: 520px;
+  background: radial-gradient(circle at center, var(--aurora-4), transparent 70%);
+  animation: aurora-drift-4 35s ease-in-out infinite alternate;
+}
+
+@keyframes aurora-drift-1 {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(8vw, 7vh, 0) scale(1.18); }
+}
+
+@keyframes aurora-drift-2 {
+  0% { transform: translate3d(0, 0, 0) scale(1.05); }
+  100% { transform: translate3d(-7vw, 9vh, 0) scale(0.9); }
+}
+
+@keyframes aurora-drift-3 {
+  0% { transform: translate3d(0, 0, 0) scale(0.95); }
+  100% { transform: translate3d(9vw, -8vh, 0) scale(1.2); }
+}
+
+@keyframes aurora-drift-4 {
+  0% { transform: translate3d(0, 0, 0) scale(1.1); }
+  100% { transform: translate3d(-9vw, -6vh, 0) scale(0.95); }
+}
+
+/* Bubbles: soft bath-time bubbles drifting up from the bottom. */
+.bubble {
+  position: absolute;
+  bottom: -16vh;
+  border-radius: 9999px;
+  background:
+    radial-gradient(circle at 32% 28%, oklch(1 0 0 / 0.7), transparent 42%),
+    radial-gradient(circle at center, var(--bubble-tint, var(--aurora-1)), transparent 72%);
+  border: 1px solid color-mix(in oklch, var(--bubble-tint, var(--aurora-1)) 55%, transparent);
+  will-change: transform, opacity;
+  animation: bubble-rise linear infinite;
+}
+
+.bubble-1  { left: 6%;  width: 46px;  height: 46px;  --bubble-tint: var(--aurora-1); animation-duration: 22s; animation-delay: 0s; }
+.bubble-2  { left: 18%; width: 28px;  height: 28px;  --bubble-tint: var(--aurora-3); animation-duration: 17s; animation-delay: -4s; }
+.bubble-3  { left: 30%; width: 64px;  height: 64px;  --bubble-tint: var(--aurora-2); animation-duration: 28s; animation-delay: -9s; }
+.bubble-4  { left: 41%; width: 22px;  height: 22px;  --bubble-tint: var(--aurora-4); animation-duration: 15s; animation-delay: -2s; }
+.bubble-5  { left: 52%; width: 52px;  height: 52px;  --bubble-tint: var(--aurora-1); animation-duration: 24s; animation-delay: -13s; }
+.bubble-6  { left: 63%; width: 34px;  height: 34px;  --bubble-tint: var(--aurora-3); animation-duration: 19s; animation-delay: -6s; }
+.bubble-7  { left: 73%; width: 72px;  height: 72px;  --bubble-tint: var(--aurora-2); animation-duration: 30s; animation-delay: -16s; }
+.bubble-8  { left: 84%; width: 26px;  height: 26px;  --bubble-tint: var(--aurora-4); animation-duration: 16s; animation-delay: -3s; }
+.bubble-9  { left: 92%; width: 40px;  height: 40px;  --bubble-tint: var(--aurora-1); animation-duration: 21s; animation-delay: -11s; }
+.bubble-10 { left: 12%; width: 58px;  height: 58px;  --bubble-tint: var(--aurora-2); animation-duration: 26s; animation-delay: -19s; }
+.bubble-11 { left: 47%; width: 30px;  height: 30px;  --bubble-tint: var(--aurora-3); animation-duration: 18s; animation-delay: -8s; }
+.bubble-12 { left: 78%; width: 48px;  height: 48px;  --bubble-tint: var(--aurora-1); animation-duration: 23s; animation-delay: -14s; }
+
+@keyframes bubble-rise {
+  0% { transform: translate3d(0, 0, 0) scale(0.85); opacity: 0; }
+  12% { opacity: 0.95; }
+  50% { transform: translate3d(2vw, -62vh, 0) scale(1); }
+  88% { opacity: 0.95; }
+  100% { transform: translate3d(-2vw, -124vh, 0) scale(1.08); opacity: 0; }
+}
+
+/* Stars: dreamy nursery night sky with twinkling layers + soft moon glow. */
+.stars-layer {
+  position: absolute;
+  inset: -10%;
+  background-repeat: repeat;
+}
+
+.stars-layer-1 {
+  background-image:
+    radial-gradient(2px 2px at 15% 25%, var(--star-color) 50%, transparent 60%),
+    radial-gradient(2px 2px at 70% 60%, var(--star-color) 50%, transparent 60%),
+    radial-gradient(1.5px 1.5px at 40% 80%, var(--star-color) 50%, transparent 60%),
+    radial-gradient(2.5px 2.5px at 88% 35%, var(--star-color) 50%, transparent 60%),
+    radial-gradient(1.5px 1.5px at 28% 52%, var(--star-color) 50%, transparent 60%);
+  background-size: 320px 320px;
+  animation: star-twinkle 4.5s ease-in-out infinite;
+}
+
+.stars-layer-2 {
+  background-image:
+    radial-gradient(1.5px 1.5px at 50% 18%, var(--star-color) 50%, transparent 60%),
+    radial-gradient(2px 2px at 22% 72%, var(--star-color) 50%, transparent 60%),
+    radial-gradient(1px 1px at 80% 82%, var(--star-color) 50%, transparent 60%),
+    radial-gradient(2px 2px at 62% 42%, var(--star-color) 50%, transparent 60%);
+  background-size: 250px 250px;
+  animation: star-twinkle 6s ease-in-out infinite;
+  animation-delay: -2s;
+}
+
+.stars-layer-3 {
+  background-image:
+    radial-gradient(1px 1px at 35% 15%, var(--star-color) 50%, transparent 60%),
+    radial-gradient(1px 1px at 8% 60%, var(--star-color) 50%, transparent 60%),
+    radial-gradient(1.5px 1.5px at 92% 70%, var(--star-color) 50%, transparent 60%),
+    radial-gradient(1px 1px at 58% 90%, var(--star-color) 50%, transparent 60%);
+  background-size: 190px 190px;
+  animation: star-twinkle 3.5s ease-in-out infinite;
+  animation-delay: -1s;
+}
+
+@keyframes star-twinkle {
+  0%, 100% { opacity: 0.35; }
+  50% { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-blob,
+  .bubble,
+  .stars-layer {
+    animation: none !important;
+  }
 }
 
 /* Vaul adds a tall ::after pseudo-element for drag affordance; it creates empty scroll space. */

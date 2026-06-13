@@ -13,6 +13,7 @@ import {
 
 import { PumpIcon } from "@/components/icons/pump-icon"
 import { DiaperIcon } from "@/components/icons/diaper-icon"
+import { AppBackground } from "@/components/layout/app-background"
 import { LogPanel, type LogPanelType } from "@/components/log/log-panel"
 import { DaySummariesPanel } from "@/components/today/day-summaries-panel"
 import { SettingsPanel } from "@/components/settings/settings-panel"
@@ -201,8 +202,9 @@ export function AppShell() {
       <TimelineFilterProvider>
       <LogPanelProvider openLogPanel={openLogPanel}>
       <TimelineZoomProvider>
-      <div className="bg-background flex h-svh flex-col overflow-hidden">
-      <main className="mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col">
+      <div className="relative flex h-svh flex-col overflow-hidden">
+      <AppBackground />
+      <main className="relative z-10 mx-auto flex min-h-0 w-full max-w-5xl flex-1 flex-col">
         {isTimelinePage ? (
           <Outlet />
         ) : (

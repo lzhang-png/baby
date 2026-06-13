@@ -40,6 +40,11 @@ const en = {
     textSizeSmall: "Small",
     textSizeDefault: "Default",
     textSizeLarge: "Large",
+    backgroundEffect: "Background effect",
+    off: "Off",
+    bgAurora: "Aurora",
+    bgBubbles: "Bubbles",
+    bgStars: "Stars",
   },
   nav: {
     timeline: "Timeline",
@@ -110,6 +115,8 @@ const en = {
     languageDescription: "Choose the language for the app interface.",
     appearanceDescription: "Choose light, medium, dark, or follow system settings.",
     textSizeDescription: "Adjust the text size across the app.",
+    backgroundEffectDescription:
+      "Choose a decorative background, or turn it off.",
     scheduleDescription: "View feeding, sleep, and routine guidance by age.",
     viewSchedule: "Open schedule",
   },

@@ -88,6 +88,19 @@ export function getCurrentStage(now = new Date()): Stage {
   return stages[stages.length - 1]
 }
 
+/** Last calendar day covered by Luca's feeding/sleep plan (Stage 3 end). */
+export function getScheduleNavigationEnd(now = new Date()): Date {
+  const stages = getStages(i18n.language)
+  const { end } = parseStageDateRange(stages[stages.length - 1].dates)
+  const scheduleEnd = new Date(end)
+  scheduleEnd.setHours(0, 0, 0, 0)
+
+  const today = new Date(now)
+  today.setHours(0, 0, 0, 0)
+
+  return scheduleEnd >= today ? scheduleEnd : today
+}
+
 export function getStageDayItems(stage: Stage): ScheduleTimelineItem[] {
   return stage.day
     .map((item) => {

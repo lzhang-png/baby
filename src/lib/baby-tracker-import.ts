@@ -1,5 +1,6 @@
 // Imported from Baby Tracker PDF export (Jun 1–6, 2026).
 import raw from "@/lib/baby-tracker-june-2026.json"
+import { getScheduleNavigationEnd } from "@/lib/schedule-utils"
 import type {
   ActivityItem,
   DiaperType,
@@ -163,13 +164,9 @@ export const IMPORTED_DATE_RANGE = {
   source: "Baby Tracker report (Jun 1–6, 2026)",
 }
 
-const FUTURE_NAV_DAYS = 14
-
 export function getNavigationDateBounds() {
   const min = new Date(`${IMPORTED_DATE_RANGE.start}T00:00:00`)
-  const max = new Date()
-  max.setHours(0, 0, 0, 0)
-  max.setDate(max.getDate() + FUTURE_NAV_DAYS)
+  const max = getScheduleNavigationEnd()
   return { min, max }
 }
 

@@ -5,11 +5,9 @@ import { PumpIcon } from "@/components/icons/pump-icon"
 import { DiaperIcon } from "@/components/icons/diaper-icon"
 import { RECORDED_COLORS } from "@/components/today/recorded-events"
 import {
-  TIMELINE_LOG_KINDS,
   useTimelineFilter,
 } from "@/contexts/timeline-filter-context"
 import type { TimelineLogKind } from "@/lib/timeline-filter"
-import { Button } from "@/components/ui/button"
 import {
   DrawerHandle,
   DrawerHandleBar,
@@ -31,9 +29,7 @@ const FILTER_ITEMS: {
 
 export function TimelineFilterPanel() {
   const { t } = useTranslation()
-  const { enabledKinds, toggleKind, resetFilter } = useTimelineFilter()
-
-  const allSelected = enabledKinds.size === TIMELINE_LOG_KINDS.length
+  const { enabledKinds, toggleKind } = useTimelineFilter()
 
   return (
     <DrawerHandle className="min-w-0 flex-col">
@@ -82,15 +78,6 @@ export function TimelineFilterPanel() {
               </button>
             )
           })}
-          <Button
-            type="button"
-            variant="secondary"
-            className="mt-1 h-10 w-full"
-            disabled={allSelected}
-            onClick={resetFilter}
-          >
-            {t("timeline.filterReset")}
-          </Button>
         </div>
       </section>
     </DrawerHandle>

@@ -64,9 +64,7 @@ export function activitySummary(
       const phase = options?.sleepPhase
 
       if (phase === "start") {
-        return s.ended_at
-          ? i18n.t("activity.sleepStarted")
-          : i18n.t("activity.sleeping")
+        return i18n.t("activity.sleepStarted")
       }
       if (phase === "end") {
         return s.ended_at

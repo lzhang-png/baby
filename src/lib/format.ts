@@ -59,6 +59,21 @@ export function formatElapsedClock(totalSec: number) {
   return `${pad(m)}:${pad(s)}`
 }
 
+/** Digit-only form of an elapsed clock value for masked MM:SS entry. */
+export function elapsedSecToClockDigits(totalSec: number) {
+  const clamped = Math.max(0, Math.floor(totalSec))
+  const minutes = Math.min(99, Math.floor(clamped / 60))
+  const seconds = clamped % 60
+  const pad = (n: number) => String(n).padStart(2, "0")
+  return `${pad(minutes)}${pad(seconds)}`
+}
+
+/** Formats digit input as MM:SS with the colon always present. */
+export function formatElapsedClockInput(digits: string) {
+  const mmss = digits.replace(/\D/g, "").slice(-4).padStart(4, "0")
+  return `${mmss.slice(0, 2)}:${mmss.slice(2, 4)}`
+}
+
 export function parseElapsedClock(value: string): number | null {
   const trimmed = value.trim()
   if (!trimmed) return null

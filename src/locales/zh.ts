@@ -42,8 +42,6 @@ const zh = {
     textSizeLarge: "大",
     backgroundEffect: "背景效果",
     off: "关闭",
-    bgAurora: "极光",
-    bgBubbles: "泡泡",
     bgStars: "星空",
   },
   nav: {
@@ -196,7 +194,7 @@ const zh = {
     lastFedJustNow: "上次喂奶 · 刚刚",
     feedingNow: "正在喂奶 · {{ago}}前",
     filterLogs: "筛选时间线记录",
-    filterTitle: "筛选记录",
+    filterTitle: "筛选",
     filterReset: "重置",
   },
   activity: {

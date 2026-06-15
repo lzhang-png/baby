@@ -42,8 +42,6 @@ const en = {
     textSizeLarge: "Large",
     backgroundEffect: "Background effect",
     off: "Off",
-    bgAurora: "Aurora",
-    bgBubbles: "Bubbles",
     bgStars: "Stars",
   },
   nav: {
@@ -199,7 +197,7 @@ const en = {
     lastFedJustNow: "Last fed just now",
     feedingNow: "Feeding now · {{ago}} ago",
     filterLogs: "Filter timeline logs",
-    filterTitle: "Filter logs",
+    filterTitle: "Filter",
     filterReset: "Reset",
   },
   activity: {

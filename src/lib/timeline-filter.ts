@@ -4,19 +4,21 @@ import { safeGetItem, safeSetItem } from "@/lib/safe-storage"
 export const TIMELINE_LOG_KINDS = ["feed", "sleep", "diaper", "pump"] as const
 export type TimelineLogKind = LogPanelType
 
-const STORAGE_KEY = "baby-timeline-log-filter"
+// Bumped from the previous "shown kinds" key: the stored set now lists the
+// kinds the user has selected to HIDE, so old data must not be reused.
+const STORAGE_KEY = "baby-timeline-hidden-kinds"
 
-export function allTimelineLogKinds(): Set<TimelineLogKind> {
-  return new Set(TIMELINE_LOG_KINDS)
+export function noHiddenLogKinds(): Set<TimelineLogKind> {
+  return new Set()
 }
 
-export function loadTimelineLogFilter(): Set<TimelineLogKind> {
+export function loadHiddenLogKinds(): Set<TimelineLogKind> {
   const stored = safeGetItem(STORAGE_KEY)
-  if (!stored) return allTimelineLogKinds()
+  if (!stored) return noHiddenLogKinds()
 
   try {
     const parsed = JSON.parse(stored) as unknown
-    if (!Array.isArray(parsed)) return allTimelineLogKinds()
+    if (!Array.isArray(parsed)) return noHiddenLogKinds()
 
     const valid = parsed.filter(
       (kind): kind is TimelineLogKind =>
@@ -26,14 +28,14 @@ export function loadTimelineLogFilter(): Set<TimelineLogKind> {
 
     return new Set(valid)
   } catch {
-    return allTimelineLogKinds()
+    return noHiddenLogKinds()
   }
 }
 
-export function saveTimelineLogFilter(enabled: Set<TimelineLogKind>) {
-  safeSetItem(STORAGE_KEY, JSON.stringify([...enabled]))
+export function saveHiddenLogKinds(hidden: Set<TimelineLogKind>) {
+  safeSetItem(STORAGE_KEY, JSON.stringify([...hidden]))
 }
 
-export function isTimelineFilterActive(enabled: Set<TimelineLogKind>) {
-  return enabled.size < TIMELINE_LOG_KINDS.length
+export function isTimelineFilterActive(hidden: Set<TimelineLogKind>) {
+  return hidden.size > 0
 }

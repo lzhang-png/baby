@@ -8,18 +8,19 @@ import {
 } from "react"
 
 import {
-  allTimelineLogKinds,
   isTimelineFilterActive,
-  loadTimelineLogFilter,
-  saveTimelineLogFilter,
+  loadHiddenLogKinds,
+  noHiddenLogKinds,
+  saveHiddenLogKinds,
   TIMELINE_LOG_KINDS,
   type TimelineLogKind,
 } from "@/lib/timeline-filter"
 
 type TimelineFilterContextValue = {
-  enabledKinds: Set<TimelineLogKind>
+  hiddenKinds: Set<TimelineLogKind>
   filterActive: boolean
   isKindEnabled: (kind: TimelineLogKind) => boolean
+  isKindHidden: (kind: TimelineLogKind) => boolean
   toggleKind: (kind: TimelineLogKind) => void
   resetFilter: () => void
 }
@@ -29,36 +30,37 @@ const TimelineFilterContext = createContext<TimelineFilterContextValue | null>(
 )
 
 export function TimelineFilterProvider({ children }: { children: ReactNode }) {
-  const [enabledKinds, setEnabledKinds] = useState(loadTimelineLogFilter)
+  const [hiddenKinds, setHiddenKinds] = useState(loadHiddenLogKinds)
 
   const commit = useCallback((next: Set<TimelineLogKind>) => {
-    setEnabledKinds(next)
-    saveTimelineLogFilter(next)
+    setHiddenKinds(next)
+    saveHiddenLogKinds(next)
   }, [])
 
   const toggleKind = useCallback((kind: TimelineLogKind) => {
-    setEnabledKinds((prev) => {
+    setHiddenKinds((prev) => {
       const next = new Set(prev)
       if (next.has(kind)) next.delete(kind)
       else next.add(kind)
-      saveTimelineLogFilter(next)
+      saveHiddenLogKinds(next)
       return next
     })
   }, [])
 
   const resetFilter = useCallback(() => {
-    commit(allTimelineLogKinds())
+    commit(noHiddenLogKinds())
   }, [commit])
 
   const value = useMemo(
     () => ({
-      enabledKinds,
-      filterActive: isTimelineFilterActive(enabledKinds),
-      isKindEnabled: (kind: TimelineLogKind) => enabledKinds.has(kind),
+      hiddenKinds,
+      filterActive: isTimelineFilterActive(hiddenKinds),
+      isKindEnabled: (kind: TimelineLogKind) => !hiddenKinds.has(kind),
+      isKindHidden: (kind: TimelineLogKind) => hiddenKinds.has(kind),
       toggleKind,
       resetFilter,
     }),
-    [enabledKinds, toggleKind, resetFilter],
+    [hiddenKinds, toggleKind, resetFilter],
   )
 
   return (

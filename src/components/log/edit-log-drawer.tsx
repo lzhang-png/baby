@@ -17,7 +17,12 @@ import {
   updatePump,
   updateSleep,
 } from "@/lib/api/logs"
-import { fromDatetimeLocalValue, toDatetimeLocalValue } from "@/lib/format"
+import { DateTimeFields } from "@/components/log/date-time-fields"
+import {
+  fromDateAndTimeValues,
+  toDateInputValue,
+  toTimeInputValue,
+} from "@/lib/format"
 import { enrichPumpLog, parseOptionalMlInput } from "@/lib/pump-side-amounts"
 import type { SavedNursingGroup } from "@/lib/nursing-timeline"
 import type {
@@ -63,8 +68,10 @@ export function EditLogDrawer({
     diaper: t("log.editDiaper"),
     pump: t("log.editPump"),
   }
-  const [when, setWhen] = useState("")
-  const [endWhen, setEndWhen] = useState("")
+  const [date, setDate] = useState("")
+  const [time, setTime] = useState("")
+  const [endDate, setEndDate] = useState("")
+  const [endTime, setEndTime] = useState("")
   const [notes, setNotes] = useState("")
 
   const [feedType, setFeedType] = useState<FeedType>("formula")
@@ -87,8 +94,10 @@ export function EditLogDrawer({
     setNotes(item.data.notes ?? "")
 
     switch (item.kind) {
-      case "feed":
-        setWhen(toDatetimeLocalValue(new Date(item.data.occurred_at)))
+      case "feed": {
+        const occurredAt = new Date(item.data.occurred_at)
+        setDate(toDateInputValue(occurredAt))
+        setTime(toTimeInputValue(occurredAt))
         setFeedType(
           item.data.feed_type === "donated" ? "formula" : item.data.feed_type,
         )
@@ -107,21 +116,33 @@ export function EditLogDrawer({
           setNursingRightDuration("")
         }
         break
-      case "sleep":
-        setWhen(toDatetimeLocalValue(new Date(item.data.started_at)))
-        setEndWhen(
-          item.data.ended_at
-            ? toDatetimeLocalValue(new Date(item.data.ended_at))
-            : "",
-        )
+      }
+      case "sleep": {
+        const startedAt = new Date(item.data.started_at)
+        setDate(toDateInputValue(startedAt))
+        setTime(toTimeInputValue(startedAt))
+        if (item.data.ended_at) {
+          const endedAt = new Date(item.data.ended_at)
+          setEndDate(toDateInputValue(endedAt))
+          setEndTime(toTimeInputValue(endedAt))
+        } else {
+          setEndDate("")
+          setEndTime("")
+        }
         break
-      case "diaper":
-        setWhen(toDatetimeLocalValue(new Date(item.data.occurred_at)))
+      }
+      case "diaper": {
+        const occurredAt = new Date(item.data.occurred_at)
+        setDate(toDateInputValue(occurredAt))
+        setTime(toTimeInputValue(occurredAt))
         setDiaperType(item.data.diaper_type)
         break
+      }
       case "pump": {
         const pump = enrichPumpLog(item.data)
-        setWhen(toDatetimeLocalValue(new Date(pump.occurred_at)))
+        const occurredAt = new Date(pump.occurred_at)
+        setDate(toDateInputValue(occurredAt))
+        setTime(toTimeInputValue(occurredAt))
         setPumpLeftMl(pump.amount_left_ml?.toString() ?? "")
         setPumpRightMl(pump.amount_right_ml?.toString() ?? "")
         setPumpLeft(pump.duration_left_min?.toString() ?? "")
@@ -137,6 +158,10 @@ export function EditLogDrawer({
 
     setSubmitting(true)
     try {
+      const occurredAt = fromDateAndTimeValues(date, time)
+      const endedAt =
+        endDate && endTime ? fromDateAndTimeValues(endDate, endTime) : null
+
       switch (item.kind) {
         case "feed":
           if (feedType === "nursing" && nursingGroup) {
@@ -163,7 +188,7 @@ export function EditLogDrawer({
                   updateFeed(entry.feed.id, {
                     occurredAt:
                       entry.feed.id === item.data.id
-                        ? fromDatetimeLocalValue(when)
+                        ? occurredAt
                         : entry.feed.occurred_at,
                     feedType: "nursing",
                     amountMl: entry.feed.amount_ml,
@@ -175,7 +200,7 @@ export function EditLogDrawer({
             )
           } else {
             await updateFeed(item.data.id, {
-              occurredAt: fromDatetimeLocalValue(when),
+              occurredAt,
               feedType,
               amountMl:
                 feedType !== "nursing" ? Number(amountMl) || null : null,
@@ -188,21 +213,21 @@ export function EditLogDrawer({
           break
         case "sleep":
           await updateSleep(item.data.id, {
-            startedAt: fromDatetimeLocalValue(when),
-            endedAt: endWhen ? fromDatetimeLocalValue(endWhen) : null,
+            startedAt: occurredAt,
+            endedAt,
             notes: notes || null,
           })
           break
         case "diaper":
           await updateDiaper(item.data.id, {
-            occurredAt: fromDatetimeLocalValue(when),
+            occurredAt,
             diaperType,
             notes: notes || null,
           })
           break
         case "pump":
           await updatePump(item.data.id, {
-            occurredAt: fromDatetimeLocalValue(when),
+            occurredAt,
             amountLeftMl: parseOptionalMlInput(pumpLeftMl),
             amountRightMl: parseOptionalMlInput(pumpRightMl),
             durationLeftMin: Number(pumpLeft) || null,
@@ -267,15 +292,13 @@ export function EditLogDrawer({
                     ]}
                   />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-when">{t("common.time")}</Label>
-                  <Input
-                    id="edit-when"
-                    type="datetime-local"
-                    value={when}
-                    onChange={(e) => setWhen(e.target.value)}
-                  />
-                </div>
+                <DateTimeFields
+                  idPrefix="edit-feed"
+                  date={date}
+                  time={time}
+                  onDateChange={setDate}
+                  onTimeChange={setTime}
+                />
                 {feedType === "nursing" ? (
                   nursingGroup ? (
                     <div className="grid grid-cols-2 gap-4">
@@ -352,24 +375,24 @@ export function EditLogDrawer({
 
             {item.kind === "sleep" && (
               <>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-sleep-start">{t("log.startTimeLabel")}</Label>
-                  <Input
-                    id="edit-sleep-start"
-                    type="datetime-local"
-                    value={when}
-                    onChange={(e) => setWhen(e.target.value)}
-                  />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-sleep-end">{t("log.endTimeOptional")}</Label>
-                  <Input
-                    id="edit-sleep-end"
-                    type="datetime-local"
-                    value={endWhen}
-                    onChange={(e) => setEndWhen(e.target.value)}
-                  />
-                </div>
+                <DateTimeFields
+                  idPrefix="edit-sleep-start"
+                  date={date}
+                  time={time}
+                  onDateChange={setDate}
+                  onTimeChange={setTime}
+                  dateLabel={t("log.startDate")}
+                  timeLabel={t("log.startTime")}
+                />
+                <DateTimeFields
+                  idPrefix="edit-sleep-end"
+                  date={endDate}
+                  time={endTime}
+                  onDateChange={setEndDate}
+                  onTimeChange={setEndTime}
+                  dateLabel={t("log.endDate")}
+                  timeLabel={t("log.endTime")}
+                />
               </>
             )}
 
@@ -408,29 +431,25 @@ export function EditLogDrawer({
                     ]}
                   />
                 </div>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-diaper-when">{t("common.time")}</Label>
-                  <Input
-                    id="edit-diaper-when"
-                    type="datetime-local"
-                    value={when}
-                    onChange={(e) => setWhen(e.target.value)}
-                  />
-                </div>
+                <DateTimeFields
+                  idPrefix="edit-diaper"
+                  date={date}
+                  time={time}
+                  onDateChange={setDate}
+                  onTimeChange={setTime}
+                />
               </>
             )}
 
             {item.kind === "pump" && (
               <>
-                <div className="flex flex-col gap-2">
-                  <Label htmlFor="edit-pump-when">{t("common.time")}</Label>
-                  <Input
-                    id="edit-pump-when"
-                    type="datetime-local"
-                    value={when}
-                    onChange={(e) => setWhen(e.target.value)}
-                  />
-                </div>
+                <DateTimeFields
+                  idPrefix="edit-pump"
+                  date={date}
+                  time={time}
+                  onDateChange={setDate}
+                  onTimeChange={setTime}
+                />
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="edit-pump-left-ml">{t("log.leftAmountMl")}</Label>

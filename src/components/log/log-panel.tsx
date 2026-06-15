@@ -31,6 +31,8 @@ import {
 } from "@/lib/api/logs"
 import {
   formatElapsedClock,
+  formatElapsedClockInput,
+  elapsedSecToClockDigits,
   formatTime,
   fromDateAndTimeValues,
   parseElapsedClock,
@@ -68,6 +70,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SegmentedControl } from "@/components/ui/segmented-control"
+import { DateTimeFields } from "@/components/log/date-time-fields"
 import { AnimatedHeight } from "@/components/ui/animated-height"
 import { DrawerHandle, DrawerHandleBar, DrawerHeader, DrawerTitle } from "@/components/ui/drawer"
 
@@ -209,7 +212,7 @@ function NursingSideTimerRow({
 }) {
   const { t } = useTranslation()
   const [editingDuration, setEditingDuration] = useState(false)
-  const [durationDraft, setDurationDraft] = useState("")
+  const [durationDigits, setDurationDigits] = useState("")
   const durationInputRef = useRef<HTMLInputElement>(null)
   const isRunning = state.status === "running"
   const isPaused = state.status === "paused"
@@ -228,12 +231,14 @@ function NursingSideTimerRow({
   }, [editingDuration])
 
   function beginDurationEdit() {
-    setDurationDraft(formatElapsedClock(elapsedSec))
+    setDurationDigits(elapsedSecToClockDigits(elapsedSec))
     setEditingDuration(true)
   }
 
   function commitDurationEdit() {
-    const parsed = parseElapsedClock(durationDraft)
+    const parsed = parseElapsedClock(
+      formatElapsedClockInput(durationDigits),
+    )
     if (parsed == null) {
       setEditingDuration(false)
       return
@@ -261,8 +266,12 @@ function NursingSideTimerRow({
               type="text"
               inputMode="numeric"
               className="font-heading h-9 min-w-0 flex-1 text-xl font-semibold tabular-nums"
-              value={durationDraft}
-              onChange={(event) => setDurationDraft(event.target.value)}
+              value={formatElapsedClockInput(durationDigits)}
+              onChange={(event) => {
+                setDurationDigits(
+                  event.target.value.replace(/\D/g, "").slice(-4),
+                )
+              }}
               onBlur={commitDurationEdit}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
@@ -272,6 +281,12 @@ function NursingSideTimerRow({
                 if (event.key === "Escape") {
                   setEditingDuration(false)
                 }
+                if (
+                  event.key.length === 1 &&
+                  !/\d/.test(event.key)
+                ) {
+                  event.preventDefault()
+                }
               }}
               disabled={disabled}
               aria-label={t("log.elapsed")}
@@ -279,7 +294,7 @@ function NursingSideTimerRow({
           ) : (
             <>
               <p className="font-heading text-xl font-semibold tabular-nums">
-                {formatElapsedClock(elapsedSec)}
+                {formatElapsedClockInput(elapsedSecToClockDigits(elapsedSec))}
               </p>
               {isPaused && (
                 <Button
@@ -337,53 +352,6 @@ function NursingSideTimerRow({
           {t("common.resume")}
         </Button>
       )}
-    </div>
-  )
-}
-
-function LogDateTimeFields({
-  idPrefix,
-  date,
-  time,
-  onDateChange,
-  onTimeChange,
-  dateLabel,
-  timeLabel,
-}: {
-  idPrefix: string
-  date: string
-  time: string
-  onDateChange: (value: string) => void
-  onTimeChange: (value: string) => void
-  dateLabel?: string
-  timeLabel?: string
-}) {
-  const { t } = useTranslation()
-  const resolvedDateLabel = dateLabel ?? t("common.date")
-  const resolvedTimeLabel = timeLabel ?? t("common.time")
-
-  return (
-    <div className="grid min-w-0 grid-cols-1 gap-4">
-      <div className="flex min-w-0 flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-date`}>{resolvedDateLabel}</Label>
-        <Input
-          id={`${idPrefix}-date`}
-          type="date"
-          value={date}
-          className="w-full min-w-0"
-          onChange={(e) => onDateChange(e.target.value)}
-        />
-      </div>
-      <div className="flex min-w-0 flex-col gap-2">
-        <Label htmlFor={`${idPrefix}-time`}>{resolvedTimeLabel}</Label>
-        <Input
-          id={`${idPrefix}-time`}
-          type="time"
-          value={time}
-          className="w-full min-w-0"
-          onChange={(e) => onTimeChange(e.target.value)}
-        />
-      </div>
     </div>
   )
 }
@@ -1009,7 +977,7 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
                   ]}
                 />
               </div>
-              <LogDateTimeFields
+              <DateTimeFields
                 idPrefix="feed"
                 date={logDate}
                 time={logTime}
@@ -1064,7 +1032,7 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
               </>
             ) : (
               <>
-                <LogDateTimeFields
+                <DateTimeFields
                   idPrefix="sleep"
                   date={logDate}
                   time={logTime}
@@ -1123,7 +1091,7 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
                   ]}
                 />
               </div>
-              <LogDateTimeFields
+              <DateTimeFields
                 idPrefix="diaper"
                 date={logDate}
                 time={logTime}

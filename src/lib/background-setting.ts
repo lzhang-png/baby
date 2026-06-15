@@ -2,24 +2,20 @@ import { useEffect, useState } from "react"
 
 import { safeGetItem, safeSetItem } from "@/lib/safe-storage"
 
-export type BackgroundEffect = "off" | "aurora" | "bubbles" | "stars"
+export type BackgroundEffect = "off" | "stars"
 
-export const BACKGROUND_EFFECTS: BackgroundEffect[] = [
-  "off",
-  "aurora",
-  "bubbles",
-  "stars",
-]
+export const BACKGROUND_EFFECTS: BackgroundEffect[] = ["off", "stars"]
 
 const STORAGE_KEY = "baby-bg-effect"
 const LEGACY_KEY = "baby-aurora-bg"
 const BG_ATTR = "data-bg"
-const DEFAULT_EFFECT: BackgroundEffect = "aurora"
+const DEFAULT_EFFECT: BackgroundEffect = "off"
 
 function normalize(value: string | null): BackgroundEffect | null {
-  return BACKGROUND_EFFECTS.includes(value as BackgroundEffect)
-    ? (value as BackgroundEffect)
-    : null
+  if (value === "off" || value === "stars") return value
+  // Migrate removed aurora/bubbles preferences.
+  if (value === "aurora" || value === "bubbles") return "off"
+  return null
 }
 
 export function getStoredBackgroundEffect(): BackgroundEffect {

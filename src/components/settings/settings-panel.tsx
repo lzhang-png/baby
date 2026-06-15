@@ -207,8 +207,6 @@ export function SettingsPanel({ open }: SettingsPanelProps) {
                 onValueChange={handleBackgroundChange}
                 options={[
                   { value: "off", label: t("common.off") },
-                  { value: "aurora", label: t("common.bgAurora") },
-                  { value: "bubbles", label: t("common.bgBubbles") },
                   { value: "stars", label: t("common.bgStars") },
                 ]}
               />

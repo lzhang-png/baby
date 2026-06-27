@@ -11,7 +11,7 @@ const STORAGE_KEY = "baby-locale"
 
 function getStoredLocale(): AppLocale {
   const stored = safeGetItem(STORAGE_KEY)
-  return stored === "en" || stored === "zh" ? stored : "zh"
+  return stored === "en" || stored === "zh" ? stored : "en"
 }
 
 void i18n.use(initReactI18next).init({

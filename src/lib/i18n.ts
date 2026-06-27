@@ -24,6 +24,13 @@ void i18n.use(initReactI18next).init({
   interpolation: { escapeValue: false },
 })
 
+function syncDocumentTitle() {
+  document.title = i18n.t("common.appName")
+}
+
+syncDocumentTitle()
+i18n.on("languageChanged", syncDocumentTitle)
+
 export function getDateLocale(language = i18n.language): string {
   return language === "zh" ? "zh-CN" : "en-US"
 }
@@ -32,6 +39,7 @@ export function setAppLanguage(locale: AppLocale) {
   void i18n.changeLanguage(locale)
   safeSetItem(STORAGE_KEY, locale)
   document.documentElement.lang = locale === "zh" ? "zh-CN" : "en"
+  syncDocumentTitle()
 }
 
 document.documentElement.lang =

@@ -43,6 +43,7 @@ const en = {
     backgroundEffect: "Background effect",
     off: "Off",
     bgStars: "Stars",
+    appName: "Baby Timeline",
   },
   nav: {
     timeline: "Timeline",
@@ -56,8 +57,8 @@ const en = {
     logActivity: "Log activity",
   },
   auth: {
-    trackerTitle: "Luca's tracker",
-    joinTitle: "Join Luca's tracker",
+    trackerTitle: "Baby Timeline",
+    joinTitle: "Join Baby Timeline",
     loginSubtitle: "Family login — feeding, sleep, diapers & pumping",
     signIn: "Sign in",
     signingIn: "Signing in…",

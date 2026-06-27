@@ -43,6 +43,7 @@ const zh = {
     backgroundEffect: "背景效果",
     off: "关闭",
     bgStars: "星空",
+    appName: "宝宝时间线",
   },
   nav: {
     timeline: "时间线",
@@ -56,8 +57,8 @@ const zh = {
     logActivity: "记录活动",
   },
   auth: {
-    trackerTitle: "Luca 的育儿记录",
-    joinTitle: "加入 Luca 的育儿记录",
+    trackerTitle: "宝宝时间线",
+    joinTitle: "加入宝宝时间线",
     loginSubtitle: "家庭登录 — 喂奶、睡眠、换尿布与吸奶",
     signIn: "登录",
     signingIn: "登录中…",

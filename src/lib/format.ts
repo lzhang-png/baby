@@ -121,7 +121,11 @@ export function toDatetimeLocalValue(date = new Date()) {
 }
 
 export function fromDateAndTimeValues(date: string, time: string) {
-  return new Date(`${date}T${time}`).toISOString()
+  const [year, month, day] = date.split("-").map(Number)
+  const [hours, minutes, seconds = 0] = time.split(":").map(Number)
+  // Construct in local time explicitly — `new Date("YYYY-MM-DDTHH:mm")`
+  // is parsed as UTC in some environments, which shifts sleep/feed times.
+  return new Date(year, month - 1, day, hours, minutes, seconds || 0).toISOString()
 }
 
 export function fromDatetimeLocalValue(value: string) {

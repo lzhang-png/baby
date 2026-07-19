@@ -527,6 +527,14 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
     return () => window.clearInterval(id)
   }, [sleepStartedAt])
 
+  // Refresh start date/time when opening the sleep form so a leftover value
+  // from an earlier session doesn't create a future sleep.
+  useEffect(() => {
+    if (type !== "sleep") return
+    setLogDate(toDateInputValue())
+    setLogTime(toTimeInputValue())
+  }, [type])
+
   async function ensureBaby() {
     if (!baby || !user) throw new Error("Missing baby or user")
     return { babyId: baby.id, userId: user.id }
@@ -678,10 +686,15 @@ export function LogPanel({ type, onLogged }: LogPanelProps) {
     setSubmitting(true)
     try {
       const { babyId, userId } = await ensureBaby()
+      // Allow backdated starts via the form, but never start in the future —
+      // a future started_at freezes the timer at 00:00 and blocks ending sleep.
+      const nowIso = new Date().toISOString()
+      const formIso = occurredAt()
+      const startedAt = formIso > nowIso ? nowIso : formIso
       const log = await insertSleep({
         babyId,
         userId,
-        startedAt: occurredAt(),
+        startedAt,
       })
       setActiveSleepId(log.id)
       setSleepStartedAt(log.started_at)

@@ -79,13 +79,26 @@ export async function endSleep(sleepId: string, endedAt: string) {
 
   if (started.error) throw started.error
 
-  const startMs = new Date(started.data.started_at).getTime()
+  let startMs = new Date(started.data.started_at).getTime()
   const endMs = new Date(endedAt).getTime()
-  const durationMin = Math.max(1, Math.round((endMs - startMs) / 60000))
+
+  // Stale/future start times (e.g. leftover form values) make end < start,
+  // which violates the DB check and freezes the live timer at 00:00.
+  const repairStart = Number.isFinite(startMs) && startMs > endMs
+  if (repairStart) startMs = endMs
+
+  const durationMin = Math.max(
+    repairStart ? 0 : 1,
+    Math.round((endMs - startMs) / 60000),
+  )
 
   const { data, error } = await supabase
     .from("sleep_logs")
-    .update({ ended_at: endedAt, duration_min: durationMin })
+    .update({
+      ...(repairStart ? { started_at: endedAt } : {}),
+      ended_at: endedAt,
+      duration_min: durationMin,
+    })
     .eq("id", sleepId)
     .select()
     .single()
